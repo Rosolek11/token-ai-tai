@@ -1,6 +1,6 @@
 # Backlog produktu
 
-Punkt startowy do projektu Scrum w Jira. Wszystkie pozycje zawieraja kryteria akceptacji; identyczne dane sa w pliku `docs/jira-import.csv` do importu.
+Historie sa utworzone w [projekcie Scrum Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog). Ponizsza tabela to lokalna kopia planu. Kryteria akceptacji znajduja sie w opisach zgloszen Jira oraz w pliku `docs/jira-import.csv`.
 
 | ID | User story | Priorytet | Sprint |
 | --- | --- | --- | --- |

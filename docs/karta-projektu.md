@@ -8,7 +8,7 @@
 
 | Osoba | Rola | GitHub login |
 | --- | --- | --- |
-| Jakub Rossa | Lider | do uzupelnienia |
+| Jakub Rossa | Lider | [Rosolek11](https://github.com/Rosolek11) |
 | Filip Dejer | Tester | do uzupelnienia |
 | Jakub Makutynowicz | Developer | do uzupelnienia |
 | Michal Maszalo | Developer | do uzupelnienia |

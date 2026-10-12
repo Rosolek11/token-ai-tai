@@ -10,13 +10,15 @@ Warstwa analityczna dla traderow Solany. Aplikacja przyjmuje adres portfela lub 
 - publiczne API dla bota Telegram oraz przyszłego panelu webowego;
 - trwale przechowywana historia w SQLite (docelowo PostgreSQL).
 
-Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [docs/backlog.md](docs/backlog.md).
+Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog), a jego lokalna kopia w [docs/backlog.md](docs/backlog.md).
+
+Obecny kod API to szkielet Sprintu 0: sprawdza format adresu i zwraca przykladowa odpowiedz. Nie pobiera jeszcze danych on-chain ani nie zapisuje analiz. Funkcje opisane powyzej stanowia plan MVP.
 
 ## Zespol
 
 | Osoba | Rola | GitHub login |
 | --- | --- | --- |
-| Jakub Rossa | Lider | do uzupelnienia |
+| Jakub Rossa | Lider | [Rosolek11](https://github.com/Rosolek11) |
 | Filip Dejer | Tester | do uzupelnienia |
 | Jakub Makutynowicz | Developer | do uzupelnienia |
 | Michal Maszalo | Developer | do uzupelnienia |
