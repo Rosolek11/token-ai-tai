@@ -10,7 +10,7 @@ Historie sa utworzone w [projekcie Scrum Token AI](https://zut-team-p5etyzyo.atl
 | TAI-4 | Jako uzytkownik chce, aby analiza byla zapisana, abym mogl wrocic do historii. | Must | 1 |
 | TAI-5 | Jako trader chce zobaczyc aktywa i metryki portfela, aby ocenic jego aktywnosc. | Must | 1 |
 | TAI-6 | Jako trader chce zobaczyc koncentracje i plynnosc tokena, aby zaczac ocene ryzyka. | Must | 2 |
-| TAI-7 | Jako uzytkownik chce uzyskac raport przez Telegram, aby wykonac research bez zmiany aplikacji. | Must | 2 |
+| TAI-7 | Jako uzytkownik chce wprowadzic adres portfela lub tokena na stronie internetowej, aby otrzymac czytelny raport. | Must | 2 |
 | TAI-8 | Jako uzytkownik chce widziec disclaimer, aby rozumiec ograniczenia raportu. | Must | 1 |
 | TAI-9 | Jako uzytkownik chce obserwowac adres, aby latwo ponownie uruchamiac analize. | Should | 2 |
 | TAI-10 | Jako uzytkownik chce otrzymac czytelny komunikat przy awarii dostawcy danych, aby nie brac braku danych za wynik. | Must | 3 |
