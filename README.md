@@ -7,7 +7,7 @@ Warstwa analityczna dla traderow Solany. Aplikacja przyjmuje adres portfela lub 
 - analiza adresu portfela: aktywa, liczba transakcji, styl zachowania oraz przeslanki;
 - analiza tokena: koncentracja posiadaczy, płynnosc, ryzyka i przeslanki;
 - historia analiz i lista obserwowanych adresow;
-- publiczne API dla bota Telegram oraz przyszłego panelu webowego;
+- strona internetowa do wprowadzania adresu i przeglądania raportów, korzystająca z API;
 - trwale przechowywana historia w SQLite (docelowo PostgreSQL).
 
 Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog), a jego lokalna kopia w [docs/backlog.md](docs/backlog.md).

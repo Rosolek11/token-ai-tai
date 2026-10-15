@@ -11,7 +11,7 @@
    - Require branches to be up to date before merging;
    - Do not allow force pushes;
    - Include administrators.
-4. W **Settings -> Secrets and variables -> Actions** dodaje przyszle sekrety (np. `TELEGRAM_BOT_TOKEN`, klucz dostawcy danych). Nigdy nie dodaje ich do plikow ani issue.
+4. W **Settings -> Secrets and variables -> Actions** dodaje przyszle sekrety (np. klucz dostawcy danych). Nigdy nie dodaje ich do plikow ani issue.
 
 ## Co wykonuje kazdy czlonek zespolu
 
