@@ -1,14 +1,23 @@
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+from app.config import Settings
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 app = FastAPI(
     title="Token AI API",
     version="0.1.0",
     description="API MVP do analizy adresow Solany. Wyniki sa przeslankami, nie porada inwestycyjna.",
 )
+app.state.settings = Settings.from_env()
+app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
 
 class AnalysisRequest(BaseModel):
@@ -33,6 +42,17 @@ def validate_solana_address(address: str) -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/client-config")
+def client_config() -> dict[str, str]:
+    """Expose only browser-safe configuration, never provider credentials."""
+    return {"apiBaseUrl": app.state.settings.public_api_base_url}
+
+
+@app.get("/", include_in_schema=False)
+def home() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.post("/analyses/wallet", response_model=AnalysisResponse, status_code=201)
