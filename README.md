@@ -12,7 +12,7 @@ Warstwa analityczna dla traderow Solany. Aplikacja przyjmuje adres portfela lub 
 
 Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog), a jego lokalna kopia w [docs/backlog.md](docs/backlog.md).
 
-Obecny kod API to szkielet Sprintu 0: sprawdza format adresu i zwraca przykladowa odpowiedz. Nie pobiera jeszcze danych on-chain ani nie zapisuje analiz. Funkcje opisane powyzej stanowia plan MVP.
+Obecny kod API to szkielet: sprawdza format adresu i zwraca przykladowa odpowiedz. Strona startowa i przelaczany podglad Token/Portfel sa gotowe, ale formularz analizy, pobieranie danych on-chain, integracje z dostawcami i zapis analiz sa dopiero planowane. Wykres na stronie jest ilustracja, nie danymi rynkowymi.
 
 ## Zespol
 
@@ -33,15 +33,17 @@ Wymagany jest Python 3.11+.
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
-Interaktywna dokumentacja API: `http://127.0.0.1:8000/docs`.
+Strona: `http://127.0.0.1:8000/`. Interaktywna dokumentacja API: `http://127.0.0.1:8000/docs`.
+`GET /health` sluzy do sprawdzenia serwera. Adres API dla interfejsu mozna ustawic przez `PUBLIC_API_BASE_URL` (pusty oznacza ten sam serwer); publiczny adres jest udostepniany przegladarce przez `GET /api/client-config`.
+Opcjonalne klucze dostawcow i AI sa czytane wylacznie ze zmiennych srodowiskowych. Przykladowe nazwy sa w `.env.example`; aplikacja nie laduje pliku `.env` automatycznie. Plik `.env` pozostaje lokalny i nie nalezy dodawac go do Git.
 
 ## Testy
 
 ```powershell
-pytest
+python -m pytest
 ```
 
 ## Konwencje pracy
