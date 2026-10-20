@@ -55,6 +55,11 @@ def home() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
+@app.get("/analysis", include_in_schema=False)
+def analysis_page() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "analysis.html")
+
+
 @app.post("/analyses/wallet", response_model=AnalysisResponse, status_code=201)
 def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
     validate_solana_address(payload.address)
