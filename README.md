@@ -40,6 +40,17 @@ Strona: `http://127.0.0.1:8000/`. Interaktywna dokumentacja API: `http://127.0.0
 `GET /health` sluzy do sprawdzenia serwera. Adres API dla interfejsu mozna ustawic przez `PUBLIC_API_BASE_URL` (pusty oznacza ten sam serwer); publiczny adres jest udostepniany przegladarce przez `GET /api/client-config`.
 Opcjonalne klucze dostawcow i AI sa czytane wylacznie ze zmiennych srodowiskowych. Przykladowe nazwy sa w `.env.example`; aplikacja nie laduje pliku `.env` automatycznie. Plik `.env` pozostaje lokalny i nie nalezy dodawac go do Git.
 
+## Walidacja adresow API
+
+`POST /analyses/token` i `POST /analyses/wallet` przyjmuja JSON z polem `address`,
+np. `{"address":"So11111111111111111111111111111111111111112"}`.
+Adres musi uzywac alfabetu Base58 Solany i po zdekodowaniu miec dokladnie 32 bajty
+(32–44 znaki, z uwzglednieniem zer wiodacych zapisanych jako `1`).
+Niepoprawny adres, brak pola, `null`, zly typ lub brak poprawnego ciala JSON
+zwracaja HTTP `422` z `{"detail":"INVALID_ADDRESS"}` przed rozpoczeciem analizy
+i wywolaniami dostawcow. Walidacja sprawdza format; nie potwierdza istnienia konta
+ani tego, czy adres nalezy do portfela lub tokena.
+
 ## Testy
 
 ```powershell
