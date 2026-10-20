@@ -104,3 +104,48 @@ def test_analysis_rejects_missing_or_malformed_body(
     assert response.status_code == 422
     assert response.json() == {"detail": "INVALID_ADDRESS"}
     analysis_id_factory.assert_not_called()
+
+
+@pytest.mark.parametrize("address", VALID_ADDRESSES)
+def test_token_analyses_accepts_base58_solana_address(address: str) -> None:
+    response = client.post("/api/token-analyses", json={"address": address})
+    assert response.status_code == 202
+    body = response.json()
+    assert body["id"]
+    assert body["status"] == "pending"
+    assert body["subject_type"] == "token"
+    assert body["address"] == address
+
+
+@pytest.mark.parametrize("address", [*INVALID_ADDRESSES, None, 123, True, [], {}])
+def test_token_analyses_rejects_invalid_address_before_processing(
+    address: object, analysis_id_factory: Mock
+) -> None:
+    response = client.post("/api/token-analyses", json={"address": address})
+    assert response.status_code == 422
+    assert response.json() == {"detail": "INVALID_ADDRESS"}
+    analysis_id_factory.assert_not_called()
+
+
+@pytest.mark.parametrize("payload", [{}, {"other": VALID_ADDRESS}, [], VALID_ADDRESS, 123])
+def test_token_analyses_rejects_missing_address(
+    payload: object, analysis_id_factory: Mock
+) -> None:
+    response = client.post("/api/token-analyses", json=payload)
+    assert response.status_code == 422
+    assert response.json() == {"detail": "INVALID_ADDRESS"}
+    analysis_id_factory.assert_not_called()
+
+
+@pytest.mark.parametrize("body", ["", "null", '{"address":'])
+def test_token_analyses_rejects_missing_or_malformed_body(
+    body: str, analysis_id_factory: Mock
+) -> None:
+    response = client.post(
+        "/api/token-analyses",
+        content=body,
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "INVALID_ADDRESS"}
+    analysis_id_factory.assert_not_called()
