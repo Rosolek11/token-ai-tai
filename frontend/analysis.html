@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050b17" />
+    <meta name="description" content="Submit a Solana token or wallet address for analysis." />
+    <title>New analysis — Token AI</title>
+    <link rel="icon" href="/assets/logo.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script src="/assets/analysis.js" defer></script>
+  </head>
+  <body class="analysis-page">
+    <div class="ambient-grid" aria-hidden="true"></div>
+    <div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Token AI — home">
+        <img class="brand-logo" src="/assets/logo.png" alt="" width="64" height="64" />
+        <span class="brand-name">TOKEN<span>AI</span><small>INTELLIGENCE LAYER</small></span>
+      </a>
+      <a class="header-link" href="/"><span aria-hidden="true">←</span> Back to overview</a>
+    </header>
+    <main class="analysis-main section-wrap">
+      <section class="analysis-card" aria-labelledby="analysis-title">
+        <p class="section-kicker">01 / NEW ANALYSIS</p>
+        <h1 id="analysis-title">Start with an address<span>.</span></h1>
+        <p class="analysis-intro">Choose what you want to explore, then enter a public Solana address.</p>
+        <form id="analysis-form" novalidate>
+          <fieldset class="analysis-type">
+            <legend class="panel-label">ANALYSIS TYPE</legend>
+            <label class="analysis-choice"><input type="radio" name="subject-type" value="token" checked /><span class="analysis-choice__icon" aria-hidden="true">◈</span><span><strong>Token</strong><small>Contract address</small></span></label>
+            <label class="analysis-choice"><input type="radio" name="subject-type" value="wallet" /><span class="analysis-choice__icon" aria-hidden="true">⌘</span><span><strong>Wallet</strong><small>Public address</small></span></label>
+          </fieldset>
+          <label class="analysis-label" for="address">SOLANA ADDRESS</label>
+          <input id="address" name="address" class="analysis-input" type="text" required minlength="32" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a token or wallet address" aria-describedby="address-hint analysis-message" />
+          <p id="address-hint" class="analysis-hint">Use a 32–64 character Base58 address.</p>
+          <button id="analysis-submit" class="button button--primary analysis-submit" type="submit"><span>Analyze address</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+          <p id="analysis-message" class="analysis-message" role="status" aria-live="polite"></p>
+        </form>
+        <p class="analysis-disclaimer">Reports are for research and do not constitute financial advice.</p>
+        <a class="analysis-back" href="/">← Back to Token AI</a>
+      </section>
+    </main>
+  </body>
+</html>
