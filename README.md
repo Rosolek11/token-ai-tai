@@ -10,7 +10,7 @@ Warstwa analityczna dla traderow Solany. Aplikacja przyjmuje adres portfela lub 
 - strona internetowa do wprowadzania adresu i przeglądania raportów, korzystająca z API;
 - trwale przechowywana historia w SQLite (docelowo PostgreSQL).
 
-Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog), a jego lokalna kopia w [docs/backlog.md](docs/backlog.md).
+Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog).
 
 Obecny kod API to szkielet: sprawdza format adresu i zwraca przykladowa odpowiedz. Strona startowa i przelaczany podglad Token/Portfel sa gotowe, ale formularz analizy, pobieranie danych on-chain, integracje z dostawcami i zapis analiz sa dopiero planowane. Wykres na stronie jest ilustracja, nie danymi rynkowymi.
 
@@ -20,7 +20,7 @@ Obecny kod API to szkielet: sprawdza format adresu i zwraca przykladowa odpowied
 | --- | --- | --- |
 | Jakub Rossa | Lider | [Rosolek11](https://github.com/Rosolek11) |
 | Filip Dejer | Tester | do uzupelnienia |
-| Jakub Makutynowicz | Developer | do uzupelnienia |
+| Jakub Makutynowicz | Developer | [jakub-wq](https://github.com/jakub-wq) |
 | Michal Maszalo | Developer | do uzupelnienia |
 
 Kazda osoba dopisuje swoj login GitHub w osobnym branchu i otwiera Pull Request do `main`. Instrukcja: [docs/onboarding-github.md](docs/onboarding-github.md).
