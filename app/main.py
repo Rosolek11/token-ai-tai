@@ -115,3 +115,33 @@ def analyse_token(payload: AnalysisRequest) -> AnalysisResponse:
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
     )
+
+
+class TokenAnalysisResponse(BaseModel):
+    id: str
+    status: str
+    subject_type: str
+    address: str
+    created_at: datetime
+    disclaimer: str
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_token_analyses_validation_error(
+    request: Request, error: RequestValidationError
+) -> JSONResponse:
+    if request.method == "POST" and request.url.path == "/api/token-analyses":
+        return JSONResponse(status_code=422, content={"detail": "INVALID_ADDRESS"})
+    return await handle_request_validation_error(request, error)
+
+
+@app.post("/api/token-analyses", response_model=TokenAnalysisResponse, status_code=202)
+def start_token_analysis(payload: AnalysisRequest) -> TokenAnalysisResponse:
+    return TokenAnalysisResponse(
+        id=str(uuid4()),
+        status="pending",
+        subject_type="token",
+        address=payload.address,
+        created_at=datetime.now(timezone.utc),
+        disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
+    )
