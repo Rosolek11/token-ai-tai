@@ -9,10 +9,23 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.market_data import DexScreenerClient, get_dexscreener_client
+from app.market_data import DexScreenerClient, MarketDataError, get_dexscreener_client
 
 ADDRESS = "So11111111111111111111111111111111111111112"
 SOURCE_URL = f"https://api.dexscreener.com/token-pairs/v1/solana/{ADDRESS}"
+METRIC_FIELDS = [
+    pytest.param(("priceUsd",), "price_usd", id="price"),
+    pytest.param(("liquidity", "usd"), "liquidity_usd", id="liquidity"),
+    pytest.param(("volume", "h24"), "volume_24h_usd", id="volume"),
+    pytest.param(("priceChange", "h24"), "price_change_24h_percent", id="change"),
+]
+
+
+def set_source_metric(pair: dict, field_path: tuple[str, ...], value: object) -> None:
+    if len(field_path) == 1:
+        pair[field_path[0]] = value
+    else:
+        pair[field_path[0]][field_path[1]] = value
 
 
 @pytest.fixture
@@ -238,3 +251,184 @@ def test_wallet_analysis_does_not_call_market_provider(
     assert response.status_code == 201
     assert "market_data" not in response.json()
     http_handler.assert_not_called()
+
+
+@pytest.mark.parametrize(("field_path", "output_field"), METRIC_FIELDS)
+@pytest.mark.parametrize("value", [None, "", "  ", "\t\n"])
+def test_each_missing_metric_preserves_other_metrics(
+    field_path: tuple[str, ...], output_field: str, value: object,
+    source_pairs: list[dict], api_client: TestClient, http_handler: Mock,
+) -> None:
+    baseline = {
+        "price_usd": 106.65,
+        "liquidity_usd": 29632649.49,
+        "volume_24h_usd": 144375727.36,
+        "price_change_24h_percent": 2.22,
+    }
+    set_source_metric(source_pairs[0], field_path, value)
+    http_handler.return_value = httpx.Response(200, json=[source_pairs[0]])
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 201
+    data = response.json()["market_data"]
+    baseline[output_field] = None
+    for metric, expected in baseline.items():
+        assert data[metric] == expected
+        assert data["pairs"][0][metric] == expected
+
+
+@pytest.mark.parametrize(("field_path", "output_field"), METRIC_FIELDS)
+@pytest.mark.parametrize("value", [0, 0.0, "0", "0.000", "1.23e-9", " 1.23 "])
+def test_each_metric_accepts_zero_and_small_numeric_values(
+    field_path: tuple[str, ...], output_field: str, value: object,
+    source_pairs: list[dict], api_client: TestClient, http_handler: Mock,
+) -> None:
+    set_source_metric(source_pairs[0], field_path, value)
+    http_handler.return_value = httpx.Response(200, json=[source_pairs[0]])
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 201
+    data = response.json()["market_data"]
+    assert data[output_field] == float(value)
+    assert data["pairs"][0][output_field] == float(value)
+
+
+@pytest.mark.parametrize(("field_path", "output_field"), METRIC_FIELDS)
+@pytest.mark.parametrize(
+    "value",
+    [True, False, [], {}, "invalid", "NaN", "Infinity", "-Infinity", "1e309", 10**400],
+    ids=["true", "false", "list", "object", "text", "nan", "inf", "negative-inf", "overflow-string", "overflow-int"],
+)
+def test_each_invalid_metric_produces_provider_error(
+    field_path: tuple[str, ...], output_field: str, value: object,
+    source_pairs: list[dict], api_client: TestClient, http_handler: Mock,
+) -> None:
+    set_source_metric(source_pairs[0], field_path, value)
+    http_handler.return_value = httpx.Response(200, json=[source_pairs[0]])
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "MARKET_DATA_UNAVAILABLE"}
+
+
+@pytest.mark.parametrize(("field_path", "output_field"), METRIC_FIELDS[:3])
+def test_amounts_cannot_be_negative(
+    field_path: tuple[str, ...], output_field: str,
+    source_pairs: list[dict], api_client: TestClient, http_handler: Mock,
+) -> None:
+    set_source_metric(source_pairs[0], field_path, -0.01)
+    http_handler.return_value = httpx.Response(200, json=[source_pairs[0]])
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "MARKET_DATA_UNAVAILABLE"}
+
+
+@pytest.mark.parametrize("field", ["liquidity", "volume", "priceChange", "baseToken", "quoteToken"])
+@pytest.mark.parametrize("value", ["", [], 0, True])
+def test_malformed_nested_objects_are_provider_errors(
+    field: str, value: object, source_pairs: list[dict],
+    api_client: TestClient, http_handler: Mock,
+) -> None:
+    source_pairs[0][field] = value
+    http_handler.return_value = httpx.Response(200, json=source_pairs)
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "MARKET_DATA_UNAVAILABLE"}
+
+
+@pytest.mark.parametrize("payload", ["", True, 0, {}, [None], [False], [[]]])
+def test_wrong_root_shapes_are_not_empty_data(
+    payload: object, api_client: TestClient, http_handler: Mock,
+) -> None:
+    http_handler.return_value = httpx.Response(200, json=payload)
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "MARKET_DATA_UNAVAILABLE"}
+
+
+@pytest.mark.parametrize("liquidity", [None, 100])
+def test_liquidity_ties_select_first_pair(
+    liquidity: float | None, source_pairs: list[dict],
+    api_client: TestClient, http_handler: Mock,
+) -> None:
+    for pair in source_pairs:
+        pair["liquidity"] = {"usd": liquidity}
+    http_handler.return_value = httpx.Response(200, json=source_pairs)
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 201
+    data = response.json()["market_data"]
+    assert data["primary_pair_address"] == source_pairs[0]["pairAddress"]
+    assert data["price_usd"] == 106.65
+    assert data["liquidity_usd"] == liquidity
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    [httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout, httpx.PoolTimeout],
+)
+def test_all_timeout_phases_are_reported_as_gateway_timeout(
+    error_type: type[httpx.TimeoutException], api_client: TestClient, http_handler: Mock,
+) -> None:
+    http_handler.side_effect = error_type("provider-internal-detail")
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 504
+    assert response.json() == {"detail": "MARKET_DATA_TIMEOUT"}
+    http_handler.assert_called_once()
+
+
+@pytest.mark.parametrize("status_code", [204, 301, 302, 403])
+def test_empty_body_redirect_and_forbidden_are_provider_errors(
+    status_code: int, api_client: TestClient, http_handler: Mock,
+) -> None:
+    http_handler.return_value = httpx.Response(
+        status_code, headers={"Location": "https://example.test/redirect"}
+    )
+    response = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "MARKET_DATA_UNAVAILABLE"}
+    http_handler.assert_called_once()
+
+
+def test_consecutive_analyses_do_not_reuse_old_metrics(
+    source_pairs: list[dict], api_client: TestClient, http_handler: Mock,
+) -> None:
+    http_handler.side_effect = [
+        httpx.Response(200, json=source_pairs),
+        httpx.Response(503),
+        httpx.Response(200, json=[]),
+        httpx.Response(200, json=[source_pairs[1]]),
+    ]
+    populated = api_client.post("/analyses/token", json={"address": ADDRESS})
+    failed = api_client.post("/analyses/token", json={"address": ADDRESS})
+    empty = api_client.post("/analyses/token", json={"address": ADDRESS})
+    recovered = api_client.post("/analyses/token", json={"address": ADDRESS})
+    assert populated.json()["market_data"]["price_usd"] == 106.65
+    assert failed.status_code == 502
+    assert empty.json()["market_data"]["price_usd"] is None
+    assert empty.json()["market_data"]["pairs"] == []
+    assert recovered.json()["market_data"]["price_usd"] == 106.6
+    assert populated.json()["id"] != recovered.json()["id"]
+    assert http_handler.call_count == 4
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_production_dependency_closes_http_client(
+    fails: bool, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+    )
+    try:
+        factory = Mock(return_value=client)
+        monkeypatch.setattr("app.market_data.httpx.Client", factory)
+        dependency = get_dexscreener_client()
+        provider = next(dependency)
+        assert provider.client is client
+        assert not client.is_closed
+        if fails:
+            with pytest.raises(MarketDataError):
+                dependency.throw(MarketDataError("test failure"))
+        else:
+            provider.fetch_token_market(ADDRESS)
+            dependency.close()
+        assert client.is_closed
+        factory.assert_called_once_with(timeout=10.0)
+    finally:
+        client.close()

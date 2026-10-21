@@ -95,6 +95,17 @@ python -m pytest
 brak danych, zera, bledy dostawcy oraz walidacje przed zapytaniem. Testy nie lacza
 sie z zewnetrznym API.
 
+Testy zachowania JavaScript (Node.js 24, bez dodatkowych pakietow):
+
+```bash
+node --test tests/market_report.test.cjs
+```
+
+Uruchamiaja skrypt formularza z mockami DOM i HTTP: sprawdzaja formatowanie,
+zrodlo, wysylanie adresu, blokade duplikatow i ukrywanie poprzedniego raportu
+podczas kolejnej analizy oraz po bledzie. Nie zastepuja testu w przegladarce.
+Oba zestawy testow sa uruchamiane przez CI.
+
 ## Konwencje pracy
 
 - Nie commitujemy bezposrednio do `main`.
