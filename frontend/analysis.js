@@ -9,6 +9,61 @@ function showMessage(text, state) {
   message.dataset.state = state;
 }
 
+function formatUsd(value) {
+  if (value === null || value === undefined || value === '') return 'Brak danych';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 'Brak danych';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: amount < 1 ? 8 : 2,
+  }).format(amount);
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined || value === '') return 'Brak danych';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 'Brak danych';
+  return `${new Intl.NumberFormat('en-US', { signDisplay: 'always', maximumFractionDigits: 2 }).format(amount)}%`;
+}
+
+function formatUpdatedAt(value) {
+  if (!value) return 'Brak danych';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Brak danych';
+  return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function updateMarketReport(result, address, subjectType) {
+  const report = document.getElementById('market-report');
+  if (subjectType !== 'token') {
+    report.hidden = true;
+    return;
+  }
+
+  const marketData = result.market_data || {};
+  report.querySelector('[data-market-value="price_usd"]').textContent = formatUsd(marketData.price_usd);
+  report.querySelector('[data-market-value="liquidity_usd"]').textContent = formatUsd(marketData.liquidity_usd);
+  report.querySelector('[data-market-value="volume_24h_usd"]').textContent = formatUsd(marketData.volume_24h_usd);
+  report.querySelector('[data-market-value="price_change_24h_percent"]').textContent = formatPercent(marketData.price_change_24h_percent);
+  report.querySelector('[data-market-value="updated_at"]').textContent = formatUpdatedAt(marketData.updated_at);
+
+  const sourceLink = report.querySelector('[data-market-source]');
+  const fallbackUrl = `https://dexscreener.com/solana/${encodeURIComponent(address)}`;
+  let sourceUrl = fallbackUrl;
+  if (typeof marketData.source_url === 'string') {
+    try {
+      const parsedUrl = new URL(marketData.source_url);
+      if (parsedUrl.protocol === 'https:') sourceUrl = parsedUrl.href;
+    } catch {
+      sourceUrl = fallbackUrl;
+    }
+  }
+  sourceLink.href = sourceUrl;
+  sourceLink.textContent = sourceUrl === fallbackUrl ? 'Open DEX Screener source ↗' : 'Open data source ↗';
+  report.hidden = false;
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (submitButton.disabled) return;
@@ -47,6 +102,7 @@ form.addEventListener('submit', async (event) => {
     if (!response.ok) {
       throw new Error(typeof result.detail === 'string' ? result.detail : 'Could not analyze this address. Check the format and try again.');
     }
+    updateMarketReport(result, address, subjectType);
     showMessage(`Analysis request accepted for ${result.subject_type}: ${result.address}.`, 'success');
   } catch (error) {
     showMessage(error.message || 'No response from the analysis service. Try again later.', 'error');

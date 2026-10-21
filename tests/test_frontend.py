@@ -24,6 +24,13 @@ def test_analysis_page_serves_address_form() -> None:
     assert 'id="address" name="address"' in response.text
     assert 'required minlength="32" maxlength="64"' in response.text
     assert "/assets/analysis.js" in response.text
+    assert 'id="market-report"' in response.text
+    assert 'data-market-value="price_usd"' in response.text
+    assert 'data-market-value="liquidity_usd"' in response.text
+    assert 'data-market-value="volume_24h_usd"' in response.text
+    assert 'data-market-value="price_change_24h_percent"' in response.text
+    assert 'data-market-value="updated_at"' in response.text
+    assert 'data-market-source' in response.text
 
 
 def test_frontend_assets_are_available() -> None:
@@ -41,6 +48,19 @@ def test_analysis_form_validates_and_prevents_duplicate_submissions() -> None:
     assert "submitButton.disabled = true" in response.text
     assert "event.preventDefault()" in response.text
     assert "Enter a Solana address to continue." in response.text
+
+
+def test_market_report_formats_metrics_and_handles_missing_data() -> None:
+    response = client.get("/assets/analysis.js")
+    assert response.status_code == 200
+    assert "result.market_data || {}" in response.text
+    assert "formatUsd(marketData.price_usd)" in response.text
+    assert "formatUsd(marketData.liquidity_usd)" in response.text
+    assert "formatUsd(marketData.volume_24h_usd)" in response.text
+    assert "formatPercent(marketData.price_change_24h_percent)" in response.text
+    assert "formatUpdatedAt(marketData.updated_at)" in response.text
+    assert "Brak danych" in response.text
+    assert "dexscreener.com/solana" in response.text
 
 
 def test_client_config_does_not_expose_secrets() -> None:

@@ -40,6 +40,25 @@
           <button id="analysis-submit" class="button button--primary analysis-submit" type="submit"><span>Analyze address</span><span class="button-arrow" aria-hidden="true">↗</span></button>
           <p id="analysis-message" class="analysis-message" role="status" aria-live="polite"></p>
         </form>
+        <section id="market-report" class="market-report" aria-labelledby="market-report-title" hidden>
+          <div class="market-report__heading">
+            <div>
+              <p class="section-kicker">02 / MARKET SNAPSHOT</p>
+              <h2 id="market-report-title">Token market data</h2>
+            </div>
+            <span class="market-report__badge">READ ONLY</span>
+          </div>
+          <dl class="market-metrics">
+            <div class="market-metric"><dt>Price</dt><dd data-market-value="price_usd">Brak danych</dd></div>
+            <div class="market-metric"><dt>Liquidity</dt><dd data-market-value="liquidity_usd">Brak danych</dd></div>
+            <div class="market-metric"><dt>24h volume</dt><dd data-market-value="volume_24h_usd">Brak danych</dd></div>
+            <div class="market-metric"><dt>24h price change</dt><dd data-market-value="price_change_24h_percent">Brak danych</dd></div>
+          </dl>
+          <div class="market-report__meta">
+            <p>Last updated <time data-market-value="updated_at">Brak danych</time></p>
+            <a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Open DEX Screener source ↗</a>
+          </div>
+        </section>
         <p class="analysis-disclaimer">Reports are for research and do not constitute financial advice.</p>
         <a class="analysis-back" href="/">← Back to Token AI</a>
       </section>
