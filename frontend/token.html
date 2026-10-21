@@ -12,10 +12,31 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="stylesheet" href="/assets/token.css" />
+    <link rel="stylesheet" href="/assets/report-intro.css" />
     <script src="/assets/analysis-common.js" defer></script>
+    <script src="/assets/report-intro.js" defer></script>
     <script src="/assets/token.js" defer></script>
   </head>
   <body class="token-page">
+    <div id="report-intro" class="report-intro" role="status" aria-label="Opening your token report. A three-second introduction.">
+      <div class="intro-grid" aria-hidden="true"></div><div class="intro-horizon" aria-hidden="true"></div><div class="intro-scanline" aria-hidden="true"></div>
+      <div class="intro-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="intro-topline" aria-hidden="true"><span><img src="/assets/logo.png" alt="" width="38" height="38" /> TAI / INTELLIGENCE LAYER</span><span>SOLANA <i></i> RESEARCH MODE</span></div>
+      <div class="intro-stage" aria-hidden="true">
+        <div class="intro-terminal intro-terminal--left"><p>TARGET / PUBLIC ADDRESS</p><code id="intro-address">SOLANA NETWORK</code><div class="intro-terminal__lines"><span></span><span></span><span></span><span></span><span></span></div><small>READ ONLY <i>↗</i></small></div>
+        <div class="intro-core">
+          <svg class="intro-connections" viewBox="0 0 640 640" fill="none"><path d="M0 210H102L154 262H230M640 420H538L486 368H410M80 560L201 439M560 80L439 201M0 420H100L153 367H230M640 210H540L487 263H410"/><circle cx="102" cy="210" r="4"/><circle cx="538" cy="420" r="4"/><circle cx="201" cy="439" r="4"/><circle cx="439" cy="201" r="4"/></svg>
+          <div class="intro-orbit intro-orbit--outer"></div><div class="intro-orbit intro-orbit--ticks"></div><div class="intro-orbit intro-orbit--middle"></div><div class="intro-orbit intro-orbit--inner"></div><div class="intro-orbit-plane"></div><div class="intro-sweep"></div>
+          <div class="intro-crosshair intro-crosshair--h"></div><div class="intro-crosshair intro-crosshair--v"></div>
+          <span class="intro-core__coordinate intro-core__coordinate--a">α / 01.006</span><span class="intro-core__coordinate intro-core__coordinate--b">λ / SIGNAL</span>
+          <div class="intro-logo"><img src="/assets/logo.png" alt="" width="600" height="600" /></div><span class="intro-node intro-node--a"></span><span class="intro-node intro-node--b"></span><span class="intro-node intro-node--c"></span>
+        </div>
+        <div class="intro-terminal intro-terminal--right"><p>INTERFACE SEQUENCE</p><ol><li><span>01</span> Establishing view <i>↗</i></li><li><span>02</span> Aligning layers <i>↗</i></li><li><span>03</span> Opening workspace <i>↗</i></li></ol><small>THREE SECONDS TO CLARITY</small></div>
+      </div>
+      <div class="intro-headline" aria-hidden="true"><p>THE WORLD MOVES FAST. FIND YOUR CONTEXT.</p><div><span>Beyond</span> <em>the noise.</em></div><small>YOUR RESEARCH STARTS HERE <span>↗</span></small></div>
+      <div class="intro-bottom" aria-hidden="true"><div class="intro-progress"><span></span></div><div><span>TAI / WORKSPACE INITIALIZATION</span><span>003 <i>→</i> 000</span></div></div>
+    </div>
+    <div id="report-app">
     <a class="skip-link" href="#report-main">Skip to content</a>
     <div class="ambient-grid" aria-hidden="true"></div>
     <div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
@@ -58,5 +79,7 @@
       <footer class="report-footer"><span>TAI / BUILT FOR CLARITY</span><p>Research information, not financial advice.</p><a href="/analysis">NEW ANALYSIS ↗</a></footer>
       <noscript><p>Enable JavaScript to retrieve market data for this address.</p></noscript>
     </main>
+    </div>
+    <noscript><style>.report-intro{display:none!important}</style></noscript>
   </body>
 </html>

@@ -98,7 +98,7 @@ sie z zewnetrznym API.
 Testy zachowania JavaScript (Node.js 24, bez dodatkowych pakietow):
 
 ```bash
-node --test tests/market_report.test.cjs
+node --test tests/market_report.test.cjs tests/report_intro.test.cjs
 ```
 
 Uruchamiaja wspolny kod, formularz i strone raportu z mockami DOM i HTTP: sprawdzaja
@@ -106,6 +106,16 @@ walidacje 32 bajtow, nawigacje do `/token/{address}`, ponowne wejscie z URL,
 spinner, blokade duplikatow, formatowanie, zera, brak danych, timeouty, bledy
 i ponawianie pobierania. Nie zastepuja testu w przegladarce.
 Oba zestawy testow sa uruchamiane przez CI.
+
+Wejscie na raport tokena odtwarza pelnoekranowa animacje interfejsu przez 3 sekundy.
+Dane sa pobierane rownolegle: szybka odpowiedz nie skraca animacji, a wolniejsza
+pozostawia zwykly stan oczekiwania po jej zakonczeniu. Odswiezenie samych danych
+przyciskiem nie odtwarza intro. Pierscienie, logo, panele i napisy schodza sie
+z krawedzi ekranu, po czym cala warstwa odslania raport. Zgodnie z wymaganiem
+pelnego ruchu samo intro ma jawnie wlaczona animacje takze przy systemowej
+preferencji ograniczonego ruchu; pozostale widoki nadal ja respektuja.
+Osobny test sprawdza granice 2999/3000 ms,
+zwolnienie blokady interakcji oraz powrot z pamieci przegladarki.
 
 ## Konwencje pracy
 

@@ -42,7 +42,7 @@ def test_invalid_token_route_still_serves_error_capable_interface() -> None:
 
 
 def test_frontend_assets_are_available() -> None:
-    for asset in ("styles.css", "token.css", "main.js", "analysis-common.js", "analysis.js", "token.js", "logo.png"):
+    for asset in ("styles.css", "token.css", "report-intro.css", "main.js", "analysis-common.js", "analysis.js", "report-intro.js", "token.js", "logo.png"):
         response = client.get(f"/assets/{asset}")
         assert response.status_code == 200
         assert response.content
