@@ -106,6 +106,12 @@ def analysis_page() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "analysis.html")
 
 
+@app.get("/token/{address}", include_in_schema=False)
+def token_report_page(address: str) -> FileResponse:
+    # Keep the address in the URL for direct visits and reloads.
+    return FileResponse(FRONTEND_DIR / "token.html")
+
+
 @app.post("/analyses/wallet", response_model=AnalysisResponse, status_code=201)
 def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
     return AnalysisResponse(
