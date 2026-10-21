@@ -1,10 +1,13 @@
+from typing import Iterator
 from unittest.mock import Mock
 
+import httpx
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.main import app, validate_solana_address
+from app.market_data import DexScreenerClient, get_dexscreener_client
 
 client = TestClient(app)
 VALID_ADDRESS = "So11111111111111111111111111111111111111112"
@@ -32,6 +35,19 @@ INVALID_ADDRESSES = [
     "invalid-address-!",
     *["1" * 31 + character for character in "0OIl! ł"],
 ]
+
+
+@pytest.fixture(autouse=True)
+def mock_market_provider() -> Iterator[None]:
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+    with httpx.Client(transport=transport) as http_client:
+        app.dependency_overrides[get_dexscreener_client] = lambda: DexScreenerClient(
+            http_client
+        )
+        try:
+            yield
+        finally:
+            app.dependency_overrides.pop(get_dexscreener_client, None)
 
 
 def test_health_returns_ok() -> None:

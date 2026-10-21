@@ -9,10 +9,16 @@ function showMessage(text, state) {
   message.dataset.state = state;
 }
 
-function formatUsd(value) {
-  if (value === null || value === undefined || value === '') return 'Brak danych';
+function parseMarketNumber(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return 'Brak danych';
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function formatUsd(value) {
+  const amount = parseMarketNumber(value);
+  if (amount === null) return 'Brak danych';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -21,9 +27,8 @@ function formatUsd(value) {
 }
 
 function formatPercent(value) {
-  if (value === null || value === undefined || value === '') return 'Brak danych';
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return 'Brak danych';
+  const amount = parseMarketNumber(value);
+  if (amount === null) return 'Brak danych';
   return `${new Intl.NumberFormat('en-US', { signDisplay: 'always', maximumFractionDigits: 2 }).format(amount)}%`;
 }
 
@@ -67,6 +72,7 @@ function updateMarketReport(result, address, subjectType) {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (submitButton.disabled) return;
+  document.getElementById('market-report').hidden = true;
 
   const address = addressInput.value.trim();
   if (!address) {

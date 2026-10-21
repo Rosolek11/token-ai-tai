@@ -1,0 +1,41 @@
+[
+  {
+    "chainId": "solana",
+    "dexId": "orca",
+    "url": "https://dexscreener.com/solana/czfq3xzzdmsdgduyrnltrhgc47cxcztlg4crryfu44ze",
+    "pairAddress": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+    "baseToken": {
+      "address": "So11111111111111111111111111111111111111112",
+      "name": "Wrapped SOL",
+      "symbol": "SOL"
+    },
+    "quoteToken": {
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "name": "USD Coin",
+      "symbol": "USDC"
+    },
+    "priceUsd": "106.65",
+    "liquidity": {"usd": 29632649.49},
+    "volume": {"h24": 144375727.36},
+    "priceChange": {"h24": 2.22}
+  },
+  {
+    "chainId": "solana",
+    "dexId": "raydium",
+    "url": "https://dexscreener.com/solana/58oqchx4ywmvkdwllzzbi4chocc2fqcuwbkwmihlyqo2",
+    "pairAddress": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
+    "baseToken": {
+      "address": "So11111111111111111111111111111111111111112",
+      "name": "Wrapped SOL",
+      "symbol": "SOL"
+    },
+    "quoteToken": {
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "symbol": "USDC"
+    },
+    "priceUsd": "106.60",
+    "liquidity": {"usd": 1000000},
+    "volume": {"h24": 2000000},
+    "priceChange": {"h24": -1.5}
+  }
+]

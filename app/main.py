@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
@@ -10,6 +10,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import Settings
+from app.market_data import (
+    DexScreenerClient,
+    MarketDataError,
+    MarketDataTimeout,
+    TokenMarketData,
+    get_dexscreener_client,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -62,6 +69,10 @@ class AnalysisResponse(BaseModel):
     disclaimer: str
 
 
+class TokenReportResponse(AnalysisResponse):
+    market_data: TokenMarketData
+
+
 @app.exception_handler(RequestValidationError)
 async def handle_request_validation_error(
     request: Request, error: RequestValidationError
@@ -106,14 +117,25 @@ def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
     )
 
 
-@app.post("/analyses/token", response_model=AnalysisResponse, status_code=201)
-def analyse_token(payload: AnalysisRequest) -> AnalysisResponse:
-    return AnalysisResponse(
+@app.post("/analyses/token", response_model=TokenReportResponse, status_code=201)
+def analyse_token(
+    payload: AnalysisRequest,
+    provider: DexScreenerClient = Depends(get_dexscreener_client),
+) -> TokenReportResponse:
+    try:
+        market_data = provider.fetch_token_market(payload.address)
+    except MarketDataTimeout as error:
+        raise HTTPException(status_code=504, detail="MARKET_DATA_TIMEOUT") from error
+    except MarketDataError as error:
+        raise HTTPException(status_code=502, detail="MARKET_DATA_UNAVAILABLE") from error
+
+    return TokenReportResponse(
         id=str(uuid4()),
         subject_type="token",
         address=payload.address,
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
+        market_data=market_data,
     )
 
 
