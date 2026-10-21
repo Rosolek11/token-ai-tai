@@ -12,7 +12,7 @@ Warstwa analityczna dla traderow Solany. Aplikacja przyjmuje adres portfela lub 
 
 Szczegoly zakresu, zespolu i decyzji technicznych znajduja sie w [karcie projektu](docs/karta-projektu.md). Backlog jest w [Jira Token AI](https://zut-team-p5etyzyo.atlassian.net/jira/software/projects/TAI/boards/2/backlog).
 
-API sprawdza format adresu, a `POST /analyses/token` pobiera pary i metryki rynkowe z DexScreener. Formularz na `/analysis` prezentuje te metryki wraz ze zrodlem i czasem pobrania. Analiza portfela oraz `POST /api/token-analyses` nadal zwracaja odpowiedzi szkieletowe; pobieranie danych on-chain i trwaly zapis analiz sa planowane. Wykres na stronie startowej jest ilustracja, nie danymi rynkowymi.
+Formularz `/analysis` otwiera `/token/{address}`. Raport pokazuje stan ladowania, rzeczywiste dane rynkowe z DEX Screener, brak par lub czytelny blad z mozliwoscia ponowienia. Odswiezenie zachowuje adres w URL i ponownie pobiera snapshot. Raport korzysta z dzialajacego `POST /analyses/token` z TAI-7; osobny `POST /api/token-analyses` pozostaje szkieletem przyszlej kolejki, a nie zrodlem gotowego raportu. Wallet przyjmuje adres, ale nie ma jeszcze raportu aktywnosci. AI, pozostali dostawcy i historia analiz sa planowane. Wykres na stronie glownej jest ilustracja, nie danymi rynkowymi.
 
 ## Zespol
 
@@ -101,9 +101,10 @@ Testy zachowania JavaScript (Node.js 24, bez dodatkowych pakietow):
 node --test tests/market_report.test.cjs
 ```
 
-Uruchamiaja skrypt formularza z mockami DOM i HTTP: sprawdzaja formatowanie,
-zrodlo, wysylanie adresu, blokade duplikatow i ukrywanie poprzedniego raportu
-podczas kolejnej analizy oraz po bledzie. Nie zastepuja testu w przegladarce.
+Uruchamiaja wspolny kod, formularz i strone raportu z mockami DOM i HTTP: sprawdzaja
+walidacje 32 bajtow, nawigacje do `/token/{address}`, ponowne wejscie z URL,
+spinner, blokade duplikatow, formatowanie, zera, brak danych, timeouty, bledy
+i ponawianie pobierania. Nie zastepuja testu w przegladarce.
 Oba zestawy testow sa uruchamiane przez CI.
 
 ## Konwencje pracy

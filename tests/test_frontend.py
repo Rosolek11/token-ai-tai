@@ -2,17 +2,15 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 client = TestClient(app)
+ADDRESS = "So11111111111111111111111111111111111111112"
 
 
 def test_home_serves_web_application() -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "Token AI" in response.text
-    assert 'id="tab-token"' in response.text
-    assert 'id="tab-wallet"' in response.text
-    assert "/assets/main.js" in response.text
+    assert 'href="/analysis"' in response.text
 
 
 def test_analysis_page_serves_address_form() -> None:
@@ -21,46 +19,33 @@ def test_analysis_page_serves_address_form() -> None:
     assert 'id="analysis-form"' in response.text
     assert 'name="subject-type" value="token"' in response.text
     assert 'name="subject-type" value="wallet"' in response.text
-    assert 'id="address" name="address"' in response.text
-    assert 'required minlength="32" maxlength="64"' in response.text
+    assert 'required minlength="32" maxlength="44"' in response.text
+    assert "/assets/analysis-common.js" in response.text
     assert "/assets/analysis.js" in response.text
-    assert 'id="market-report"' in response.text
-    assert 'data-market-value="price_usd"' in response.text
-    assert 'data-market-value="liquidity_usd"' in response.text
-    assert 'data-market-value="volume_24h_usd"' in response.text
-    assert 'data-market-value="price_change_24h_percent"' in response.text
-    assert 'data-market-value="updated_at"' in response.text
-    assert 'data-market-source' in response.text
+
+
+def test_token_report_supports_direct_visits_and_reload() -> None:
+    for _ in range(2):
+        response = client.get(f"/token/{ADDRESS}")
+        assert response.status_code == 200
+        assert 'id="loading-state"' in response.text
+        assert 'id="error-state"' in response.text
+        assert 'id="report-content"' in response.text
+        assert 'data-market-value="price_usd"' in response.text
+        assert "/assets/token.js" in response.text
+
+
+def test_invalid_token_route_still_serves_error_capable_interface() -> None:
+    response = client.get("/token/not-a-solana-address")
+    assert response.status_code == 200
+    assert 'id="error-detail"' in response.text
 
 
 def test_frontend_assets_are_available() -> None:
-    for path in ("/assets/styles.css", "/assets/main.js", "/assets/analysis.js", "/assets/logo.png"):
-        response = client.get(path)
+    for asset in ("styles.css", "token.css", "main.js", "analysis-common.js", "analysis.js", "token.js", "logo.png"):
+        response = client.get(f"/assets/{asset}")
         assert response.status_code == 200
         assert response.content
-
-
-def test_analysis_form_validates_and_prevents_duplicate_submissions() -> None:
-    response = client.get("/assets/analysis.js")
-    assert response.status_code == 200
-    assert "base58Pattern" in response.text
-    assert "32,64" in response.text
-    assert "submitButton.disabled = true" in response.text
-    assert "event.preventDefault()" in response.text
-    assert "Enter a Solana address to continue." in response.text
-
-
-def test_market_report_formats_metrics_and_handles_missing_data() -> None:
-    response = client.get("/assets/analysis.js")
-    assert response.status_code == 200
-    assert "result.market_data || {}" in response.text
-    assert "formatUsd(marketData.price_usd)" in response.text
-    assert "formatUsd(marketData.liquidity_usd)" in response.text
-    assert "formatUsd(marketData.volume_24h_usd)" in response.text
-    assert "formatPercent(marketData.price_change_24h_percent)" in response.text
-    assert "formatUpdatedAt(marketData.updated_at)" in response.text
-    assert "Brak danych" in response.text
-    assert "dexscreener.com/solana" in response.text
 
 
 def test_client_config_does_not_expose_secrets() -> None:

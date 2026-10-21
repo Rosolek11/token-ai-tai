@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050b17" />
+    <title>Token report — Token AI</title>
+    <meta name="description" content="Explore a source-backed market snapshot for a Solana token." />
+    <link rel="icon" href="/assets/logo.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/token.css" />
+    <script src="/assets/analysis-common.js" defer></script>
+    <script src="/assets/token.js" defer></script>
+  </head>
+  <body class="token-page">
+    <a class="skip-link" href="#report-main">Skip to content</a>
+    <div class="ambient-grid" aria-hidden="true"></div>
+    <div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Token AI — home"><img class="brand-logo" src="/assets/logo.png" alt="" width="64" height="64" /><span class="brand-name">TOKEN<span>AI</span><small>INTELLIGENCE LAYER</small></span></a>
+      <nav class="report-nav" aria-label="Report navigation"><a href="/">Overview</a><a href="/analysis">New analysis <span aria-hidden="true">↗</span></a></nav>
+    </header>
+    <main class="report-shell section-wrap" id="report-main">
+      <div class="report-breadcrumb"><a href="/analysis">WORKSPACE</a><span>/</span><span>TOKEN REPORT</span><span class="report-network"><i></i> SOLANA MAINNET</span></div>
+      <section class="report-identity" aria-labelledby="report-title">
+        <div><p class="section-kicker">ON-CHAIN RESEARCH / 01</p><h1 id="report-title">Token report<span>.</span></h1><div class="report-address-row"><span class="report-address-label">CA</span><code id="report-address" tabindex="0"></code><button id="copy-address" class="report-copy" type="button" aria-label="Copy token address">Copy</button><span id="copy-feedback" class="sr-only" role="status"></span></div></div>
+        <div class="report-identity__actions"><span id="report-state-badge" class="report-state-badge" data-state="loading"><i></i><span id="report-state-label">CONNECTING</span></span><button id="refresh-report" class="report-refresh" type="button" disabled><span aria-hidden="true">↻</span> Refresh data</button></div>
+      </section>
+      <p id="report-status" class="report-status" role="status" aria-live="polite">Requesting current market data from DEX Screener.</p>
+      <div class="report-layout">
+        <section class="report-panel" id="report-stage" aria-label="Token market report" aria-busy="true">
+          <div class="report-panel__bar"><span><i></i> TAI / MARKET INTELLIGENCE</span><span>READ ONLY</span></div>
+          <div id="loading-state" class="report-loading">
+            <div class="report-scanner" aria-hidden="true"><div></div><div></div><span>TAI</span></div>
+            <p class="section-kicker">ESTABLISHING CONTEXT</p><h2>Reading the market<span>…</span></h2><p>Fetching trading pairs, liquidity and price activity.<br />Your report will appear here when the source responds.</p><div class="report-loading-track" aria-hidden="true"><span></span></div><span class="report-loading-note">DIRECT FROM SOURCE / NO ESTIMATED VALUES</span>
+            <div class="report-skeletons" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          </div>
+          <div id="error-state" class="report-error" role="alert" hidden><span class="report-error__icon" aria-hidden="true">!</span><p class="section-kicker">CONNECTION INTERRUPTED</p><h2 id="error-title">We couldn't load this report.</h2><p id="error-detail"></p><button id="retry-analysis" class="button button--primary" type="button"><span>Try again</span><span class="button-arrow" aria-hidden="true">↻</span></button><a href="/analysis">Use a different address ↗</a></div>
+          <div id="report-content" hidden>
+            <section id="market-report" class="market-report report-market" aria-labelledby="market-report-title">
+              <div class="market-report__heading"><div><p class="section-kicker">01 / MARKET SNAPSHOT</p><h2 id="market-report-title"><span id="report-token-name">Token market data</span></h2></div><span class="report-data-label">DEX SCREENER</span></div>
+              <div id="empty-market" class="report-notice" hidden><span aria-hidden="true">∅</span><div><h3>No trading pairs found.</h3><p>The source has no Solana pairs for this address. Check the contract address or try again later. Missing values are shown as “No data”.</p></div></div>
+              <div id="partial-market" class="report-partial" hidden>Some metrics are unavailable for the selected pair. Missing values are shown as “No data”, not zero.</div>
+              <dl class="market-metrics"><div class="market-metric"><dt><span>01</span> Price / USD</dt><dd data-market-value="price_usd">No data</dd><small>Selected pair · base token</small></div><div class="market-metric"><dt><span>02</span> Liquidity</dt><dd data-market-value="liquidity_usd">No data</dd><small>Selected trading pair</small></div><div class="market-metric"><dt><span>03</span> 24h volume</dt><dd data-market-value="volume_24h_usd">No data</dd><small>Rolling 24-hour window</small></div><div class="market-metric"><dt><span>04</span> 24h price change</dt><dd data-market-value="price_change_24h_percent">No data</dd><small>Base-token price movement</small></div></dl>
+              <div class="report-pair-summary"><span>PAIR SELECTION</span><p id="pair-summary"></p></div>
+              <div class="market-report__meta"><p>Retrieved <time data-market-value="updated_at">No data</time></p><a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Verify on DEX Screener ↗</a></div>
+            </section>
+          </div>
+        </section>
+        <aside class="report-context" aria-label="Report context">
+          <section class="report-context-card"><div class="report-context-card__title"><p class="section-kicker">THE SIGNAL PATH</p><span aria-hidden="true">✦</span></div><ol class="report-steps"><li><span>01</span><div><strong>Public address</strong><small>No wallet connection required</small></div><i class="is-ready"></i></li><li><span>02</span><div><strong>Market snapshot</strong><small id="source-state">Waiting for DEX Screener</small></div><i id="source-led"></i></li><li class="is-planned"><span>03</span><div><strong>AI interpretation</strong><small>Coming in a later stage</small></div><span class="report-later">NEXT</span></li></ol></section>
+          <section class="report-context-card report-reading-note"><p class="section-kicker">KNOW WHAT YOU'RE READING</p><h2>A snapshot.<br /><em>With a source.</em></h2><p>Metrics come from one trading pair selected by liquidity. They are not totals across every exchange.</p><p>Retrieved time records when we fetched the data. You can verify the source below the metrics.</p><a href="/analysis">Explore another address <span aria-hidden="true">↗</span></a></section>
+        </aside>
+      </div>
+      <footer class="report-footer"><span>TAI / BUILT FOR CLARITY</span><p>Research information, not financial advice.</p><a href="/analysis">NEW ANALYSIS ↗</a></footer>
+      <noscript><p>Enable JavaScript to retrieve market data for this address.</p></noscript>
+    </main>
+  </body>
+</html>
