@@ -21,7 +21,9 @@ function page(fetchHandler = async () => { throw new Error('Unexpected request')
     'market-report', 'loading-state', 'error-state', 'report-content', 'refresh-report',
     'retry-analysis', 'copy-address', 'report-address', 'report-stage', 'report-state-badge',
     'report-state-label', 'report-status', 'source-state', 'source-led', 'error-title',
-    'error-detail', 'empty-market', 'partial-market', 'report-token-name', 'pair-summary', 'copy-feedback'];
+    'error-detail', 'empty-market', 'partial-market', 'report-token-name', 'pair-summary', 'copy-feedback',
+    'security-report', 'security-verdict', 'security-flags-count', 'security-flags-list',
+    'top-holders-list', 'security-overall-status', 'security-source-state', 'security-source-led'];
   const elements = Object.fromEntries(names.map(name => [name, element()]));
   elements.address.value = address;
   elements['analysis-form'].elements = { 'subject-type': { value: 'token' } };
@@ -30,6 +32,25 @@ function page(fetchHandler = async () => { throw new Error('Unexpected request')
     elements['market-report'].children[`[data-market-value="${key}"]`] = element();
   }
   elements['market-report'].children['[data-market-source]'] = element();
+  for (const src of ['rugcheck', 'dexscreener', 'dextools', 'gmgn']) {
+    elements['security-report'].children[`[data-security-source="${src}"]`] = element();
+    elements['security-report'].children[`[data-source-status="${src}"]`] = element();
+  }
+  for (const key of [
+    'risk_level', 'safety_score', 'normalized_score', 'risk_score', 'is_honeypot', 'rugged',
+    'dextools_score', 'flags_counts', 'mint_authority_active', 'mint_authority',
+    'freeze_authority_active', 'freeze_authority', 'mutable_metadata', 'update_authority',
+    'token_program', 'transfer_fee_pct', 'buy_sell_tax', 'contract_verification',
+    'blacklist_scam_check', 'holder_count', 'top_holder_pct', 'top_holder_address',
+    'top_5_holders_pct', 'top_10_holders_pct', 'creator_balance_pct', 'creator_address',
+    'insider_summary', 'bundled_supply_pct', 'snipers_and_rugs', 'total_market_liquidity_usd',
+    'lp_locked_pct', 'lp_burned_pct', 'lp_locked_usd', 'lp_providers_count', 'fdv_mcap',
+    'short_term_volume', 'short_term_price_change', 'txns_buys_sells_24h', 'buy_sell_ratio_24h',
+    'txns_short_term', 'pair_age_boosts', 'dex_list', 'supply_decimals', 'verification_status', 'social_links'
+  ]) {
+    elements['security-report'].children[`[data-security-value="${key}"]`] = element();
+  }
+  elements['security-report'].children['[data-rugcheck-source]'] = element();
   const navigations = [];
   const listeners = {};
   const context = {
@@ -249,4 +270,32 @@ test('a browser request timeout restores an actionable error', async () => {
   assert.equal(current.elements['error-state'].hidden, false);
   assert.match(current.elements['error-detail'].textContent, /timed out/);
   assert.equal(current.elements['retry-analysis'].disabled, false);
+});
+test('security report renders normalized flags, parameters and unavailable sources', () => {
+  const current = page();
+  current.common.updateMarketReport({
+    ...data(),
+    security_data: {
+      overall_status: 'partial',
+      risk_summary: { risk_level: 'low', safety_score: 87.5, normalized_score: 12.5, risk_score: 100, is_honeypot: false, rugged: false, total_flags_count: 2, critical_flags_count: 0, warning_flags_count: 0, safe_flags_count: 2, verdict_summary: 'Aggregated from rugcheck, dexscreener.' },
+      authorities: { mint_authority_active: false, freeze_authority_active: false, mutable_metadata: false, is_token_2022: false, transfer_fee_pct: 0, is_open_source: true, is_proxy: false },
+      holder_distribution: { holder_count: 485210, top_holder_pct: 12.5, top_5_holders_pct: 18.0, top_10_holders_pct: 21.0, creator_balance_pct: 2.5, bundled_supply_pct: 4.2, sniper_holders_count: 3, dev_rug_history_count: 0, top_holders: [{ address, pct: 12.5, ui_amount: 1000, is_insider: false }] },
+      liquidity_security: { total_market_liquidity_usd: 30632649.49, lp_locked_pct: 94.5, lp_burned_pct: 91.5, lp_locked_usd: 28000000 },
+      market_activity: { fdv_usd: 61200000000, market_cap_usd: 50100000000, buys_24h: 12400, sells_24h: 10000, total_txns_24h: 22400, buy_sell_ratio_24h: 1.24, pair_age_hours: 48, active_boosts: 2, total_supply: 1000000000, token_decimals: 9 },
+      verification_and_metadata: { jupiter_verified: true, dextools_score: 92, buy_tax_pct: 0, sell_tax_pct: 0, is_blacklisted: false, is_potentially_scam: false },
+      flags: [{ code: 'mint_authority', title: 'Mint authority', severity: 'ok', source: 'rugcheck', description: 'Mint authority is renounced.' }],
+      sources: {
+        rugcheck: { status: 'ok' },
+        dexscreener: { status: 'ok' },
+        dextools: { status: 'unavailable', reason: 'rate_limited' },
+        gmgn: { status: 'unavailable', reason: 'missing_api_key' },
+      },
+    },
+  }, address);
+  assert.equal(current.elements['security-report'].children['[data-security-value="risk_level"]'].textContent, 'LOW');
+  assert.equal(current.elements['security-report'].children['[data-security-value="mint_authority_active"]'].textContent, 'Renounced');
+  assert.equal(current.elements['security-report'].children['[data-security-value="lp_locked_pct"]'].textContent, '94.5%');
+  assert.equal(current.elements['security-report'].children['[data-source-status="rugcheck"]'].textContent, 'OK');
+  assert.match(current.elements['security-report'].children['[data-source-status="dextools"]'].textContent, /UNAVAILABLE/);
+  assert.match(current.elements['security-report'].children['[data-source-status="gmgn"]'].textContent, /UNAVAILABLE/);
 });

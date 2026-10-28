@@ -53,6 +53,11 @@ async function loadReport() {
     document.getElementById('report-token-name').textContent = token?.symbol ? `${token.symbol} / Market snapshot` : 'Token market data';
     document.getElementById('pair-summary').textContent = empty ? 'No market pair is available for this address.' : primary ? `${market.pairs.length} pair${market.pairs.length === 1 ? '' : 's'} found · selected ${primary.dex_id || 'DEX'} pair by highest known liquidity.` : 'No base-token pair available. Source pairs are quote-token pairs, so summary metrics are unavailable.';
     setReportState(empty ? 'no_data' : 'ready', empty ? 'The source returned no trading pairs for this address.' : 'Market snapshot ready. All metrics refer to the selected trading pair.');
+    const secStateEl = document.getElementById('security-source-state');
+    const secLedEl = document.getElementById('security-source-led');
+    const secStatus = result?.security_data?.overall_status;
+    if (secStateEl) secStateEl.textContent = secStatus === 'ok' ? 'All security sources ready' : secStatus === 'partial' ? 'Partial security telemetry' : 'Unavailable / limited sources';
+    if (secLedEl) secLedEl.className = ['ok', 'partial'].includes(secStatus) ? 'is-ready' : '';
   } catch (error) {
     document.getElementById('error-title').textContent = "We couldn't load this report.";
     document.getElementById('error-detail').textContent = error.message || 'The analysis service is unavailable. Please try again.';

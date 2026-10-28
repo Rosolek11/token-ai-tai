@@ -1,0 +1,27 @@
+{
+  "statusCode": 200,
+  "data": {
+    "isOpenSource": "yes",
+    "isHoneypot": "no",
+    "isMintable": "no",
+    "isProxy": "no",
+    "slippageModifiable": "no",
+    "isBlacklisted": "no",
+    "sellTax": {
+      "min": 0.0,
+      "max": 0.0,
+      "status": "ok"
+    },
+    "buyTax": {
+      "min": 0.0,
+      "max": 0.0,
+      "status": "ok"
+    },
+    "isContractRenounced": "yes",
+    "isPotentiallyScam": "no",
+    "dextScore": {
+      "total": 92
+    },
+    "holders": 485210
+  }
+}
