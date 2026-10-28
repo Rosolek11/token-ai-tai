@@ -69,10 +69,94 @@
               <div class="report-pair-summary"><span>PAIR SELECTION</span><p id="pair-summary"></p></div>
               <div class="market-report__meta"><p>Retrieved <time data-market-value="updated_at">No data</time></p><a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Verify on DEX Screener ↗</a></div>
             </section>
+            <section id="security-report" class="market-report report-market report-security" aria-labelledby="security-report-title">
+              <div class="market-report__heading">
+                <div>
+                  <p class="section-kicker">02 / SECURITY &amp; ON-CHAIN TELEMETRY</p>
+                  <h2 id="security-report-title">Security, audit &amp; deep token parameters</h2>
+                </div>
+                <div id="security-source-badges" class="security-sources-bar" aria-label="Security data sources">
+                  <span class="security-source-pill" data-security-source="rugcheck">RUGCHECK: <strong data-source-status="rugcheck">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="dexscreener">DEXSCREENER: <strong data-source-status="dexscreener">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="dextools">DEXTOOLS: <strong data-source-status="dextools">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="gmgn">GMGN AGENT: <strong data-source-status="gmgn">CHECKING</strong></span>
+                </div>
+              </div>
+              <div id="security-verdict-box" class="report-pair-summary security-verdict-box">
+                <span>AGGREGATED SECURITY SUMMARY (READ-ONLY)</span>
+                <p id="security-verdict">Evaluating on-chain security signals and provider availability…</p>
+              </div>
+              <h3 class="security-subheading">02A / RISK SCORE &amp; AUDIT VERDICT</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>01</span> Risk level</dt><dd data-security-value="risk_level">No data</dd><small>Normalized severity classification</small></div>
+                <div class="market-metric"><dt><span>02</span> Safety score</dt><dd data-security-value="safety_score">No data</dd><small>0–100 scale (higher is safer)</small></div>
+                <div class="market-metric"><dt><span>03</span> Normalized risk</dt><dd data-security-value="normalized_score">No data</dd><small>0–100 composite risk index</small></div>
+                <div class="market-metric"><dt><span>04</span> Raw RugCheck score</dt><dd data-security-value="risk_score">No data</dd><small>Provider risk points</small></div>
+                <div class="market-metric"><dt><span>05</span> Honeypot status</dt><dd data-security-value="is_honeypot">No data</dd><small>DexTools &amp; GMGN read-only check</small></div>
+                <div class="market-metric"><dt><span>06</span> Rugged flag</dt><dd data-security-value="rugged">No data</dd><small>RugCheck historical flag</small></div>
+                <div class="market-metric"><dt><span>07</span> DEXTscore</dt><dd data-security-value="dextools_score">No data</dd><small>DexTools audit score</small></div>
+                <div class="market-metric"><dt><span>08</span> Detected signals</dt><dd data-security-value="flags_counts">No data</dd><small>Critical / Warning / Safe</small></div>
+              </dl>
+              <h3 class="security-subheading">02B / CONTRACT AUTHORITIES &amp; TAXES</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>09</span> Mint authority</dt><dd data-security-value="mint_authority_active">No data</dd><small data-security-value="mint_authority">Minting permission state</small></div>
+                <div class="market-metric"><dt><span>10</span> Freeze authority</dt><dd data-security-value="freeze_authority_active">No data</dd><small data-security-value="freeze_authority">Account freeze permission</small></div>
+                <div class="market-metric"><dt><span>11</span> Mutable metadata</dt><dd data-security-value="mutable_metadata">No data</dd><small data-security-value="update_authority">Metadata modification state</small></div>
+                <div class="market-metric"><dt><span>12</span> Token standard</dt><dd data-security-value="token_program">No data</dd><small>SPL Token / Token-2022</small></div>
+                <div class="market-metric"><dt><span>13</span> Transfer fee %</dt><dd data-security-value="transfer_fee_pct">No data</dd><small>On-chain transfer fee</small></div>
+                <div class="market-metric"><dt><span>14</span> Buy / Sell tax</dt><dd data-security-value="buy_sell_tax">No data</dd><small>Audit tax percentages</small></div>
+                <div class="market-metric"><dt><span>15</span> Open source / Proxy</dt><dd data-security-value="contract_verification">No data</dd><small>Verified source &amp; proxy check</small></div>
+                <div class="market-metric"><dt><span>16</span> Blacklist / Scam check</dt><dd data-security-value="blacklist_scam_check">No data</dd><small>Blacklist &amp; scam flags</small></div>
+              </dl>
+              <h3 class="security-subheading">02C / HOLDERS, INSIDERS &amp; BUNDLING</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>17</span> Total holders</dt><dd data-security-value="holder_count">No data</dd><small>Unique token accounts</small></div>
+                <div class="market-metric"><dt><span>18</span> Top 1 holder %</dt><dd data-security-value="top_holder_pct">No data</dd><small data-security-value="top_holder_address">Largest wallet share</small></div>
+                <div class="market-metric"><dt><span>19</span> Top 5 holders %</dt><dd data-security-value="top_5_holders_pct">No data</dd><small>Top 5 concentration</small></div>
+                <div class="market-metric"><dt><span>20</span> Top 10 holders %</dt><dd data-security-value="top_10_holders_pct">No data</dd><small>Top 10 concentration</small></div>
+                <div class="market-metric"><dt><span>21</span> Creator share %</dt><dd data-security-value="creator_balance_pct">No data</dd><small data-security-value="creator_address">Deployer held supply</small></div>
+                <div class="market-metric"><dt><span>22</span> Insider networks</dt><dd data-security-value="insider_summary">No data</dd><small>Graph insiders &amp; supply %</small></div>
+                <div class="market-metric"><dt><span>23</span> Bundled supply %</dt><dd data-security-value="bundled_supply_pct">No data</dd><small>GMGN bundler ratio</small></div>
+                <div class="market-metric"><dt><span>24</span> Snipers &amp; dev rugs</dt><dd data-security-value="snipers_and_rugs">No data</dd><small>Sniper wallets &amp; rug history</small></div>
+              </dl>
+              <h3 class="security-subheading">02D / LIQUIDITY LOCKS &amp; DEEP MARKET TELEMETRY</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>25</span> Total DEX liquidity</dt><dd data-security-value="total_market_liquidity_usd">No data</dd><small>Aggregated across Solana pools</small></div>
+                <div class="market-metric"><dt><span>26</span> LP locked %</dt><dd data-security-value="lp_locked_pct">No data</dd><small>Locked liquidity ratio</small></div>
+                <div class="market-metric"><dt><span>27</span> LP burned %</dt><dd data-security-value="lp_burned_pct">No data</dd><small>Burned LP tokens ratio</small></div>
+                <div class="market-metric"><dt><span>28</span> Locked / Unlocked USD</dt><dd data-security-value="lp_locked_usd">No data</dd><small data-security-value="lp_providers_count">LP lock valuation</small></div>
+                <div class="market-metric"><dt><span>29</span> FDV / Market Cap</dt><dd data-security-value="fdv_mcap">No data</dd><small>Fully diluted &amp; market cap</small></div>
+                <div class="market-metric"><dt><span>30</span> Volume (5m / 1h / 6h)</dt><dd data-security-value="short_term_volume">No data</dd><small>Multi-window trading volume</small></div>
+                <div class="market-metric"><dt><span>31</span> Price Δ (5m / 1h / 6h)</dt><dd data-security-value="short_term_price_change">No data</dd><small>Multi-window price momentum</small></div>
+                <div class="market-metric"><dt><span>32</span> 24h Buys / Sells</dt><dd data-security-value="txns_buys_sells_24h">No data</dd><small data-security-value="buy_sell_ratio_24h">Order flow balance</small></div>
+                <div class="market-metric"><dt><span>33</span> 1h &amp; 5m Buys / Sells</dt><dd data-security-value="txns_short_term">No data</dd><small>Recent transaction flow</small></div>
+                <div class="market-metric"><dt><span>34</span> Pair age &amp; boosts</dt><dd data-security-value="pair_age_boosts">No data</dd><small data-security-value="dex_list">Pool maturity &amp; DEXes</small></div>
+                <div class="market-metric"><dt><span>35</span> Supply &amp; decimals</dt><dd data-security-value="supply_decimals">No data</dd><small>Total supply &amp; precision</small></div>
+                <div class="market-metric"><dt><span>36</span> Verification &amp; links</dt><dd data-security-value="verification_status">No data</dd><small data-security-value="social_links">Jupiter, RugCheck &amp; socials</small></div>
+              </dl>
+              <div class="security-lists-wrap">
+                <div class="security-Flags-panel">
+                  <h3 class="security-subheading">02E / NORMALIZED SECURITY FLAGS (<span id="security-flags-count">0</span>)</h3>
+                  <ul id="security-flags-list" class="security-flags-list">
+                    <li class="security-flag-item" data-severity="info"><span>INFO</span><div><strong>Waiting for security telemetry</strong><small>Normalized flags from RugCheck, DexScreener, DexTools and GMGN will appear here.</small></div></li>
+                  </ul>
+                </div>
+                <div class="security-holders-panel">
+                  <h3 class="security-subheading">02F / TOP HOLDERS BREAKDOWN</h3>
+                  <ul id="top-holders-list" class="security-flags-list">
+                    <li class="security-flag-item" data-severity="info"><span>HOLDERS</span><div><strong>No holder breakdown loaded</strong><small>Top wallet concentrations will be listed when available.</small></div></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="market-report__meta">
+                <p>Security &amp; AI telemetry <strong id="security-overall-status">READ-ONLY</strong></p>
+                <a data-rugcheck-source href="https://rugcheck.xyz" target="_blank" rel="noopener noreferrer">Verify on RugCheck ↗</a>
+              </div>
+            </section>
           </div>
         </section>
         <aside class="report-context" aria-label="Report context">
-          <section class="report-context-card"><div class="report-context-card__title"><p class="section-kicker">THE SIGNAL PATH</p><span aria-hidden="true">✦</span></div><ol class="report-steps"><li><span>01</span><div><strong>Public address</strong><small>No wallet connection required</small></div><i class="is-ready"></i></li><li><span>02</span><div><strong>Market snapshot</strong><small id="source-state">Waiting for DEX Screener</small></div><i id="source-led"></i></li><li class="is-planned"><span>03</span><div><strong>AI interpretation</strong><small>Coming in a later stage</small></div><span class="report-later">NEXT</span></li></ol></section>
+          <section class="report-context-card"><div class="report-context-card__title"><p class="section-kicker">THE SIGNAL PATH</p><span aria-hidden="true">✦</span></div><ol class="report-steps"><li><span>01</span><div><strong>Public address</strong><small>No wallet connection required</small></div><i class="is-ready"></i></li><li><span>02</span><div><strong>Market snapshot</strong><small id="source-state">Waiting for DEX Screener</small></div><i id="source-led"></i></li><li><span>03</span><div><strong>Security &amp; audit</strong><small id="security-source-state">RugCheck · DexTools · GMGN</small></div><i id="security-source-led"></i></li><li class="is-planned"><span>04</span><div><strong>AI interpretation</strong><small>36+ parameters ready for AI</small></div><span class="report-later">NEXT</span></li></ol></section>
           <section class="report-context-card report-reading-note"><p class="section-kicker">KNOW WHAT YOU'RE READING</p><h2>A snapshot.<br /><em>With a source.</em></h2><p>Metrics come from one trading pair selected by liquidity. They are not totals across every exchange.</p><p>Retrieved time records when we fetched the data. You can verify the source below the metrics.</p><a href="/analysis">Explore another address <span aria-hidden="true">↗</span></a></section>
         </aside>
       </div>

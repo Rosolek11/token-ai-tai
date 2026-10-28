@@ -53,3 +53,24 @@ def test_client_config_does_not_expose_secrets() -> None:
     assert response.status_code == 200
     assert response.json() == {"apiBaseUrl": app.state.settings.public_api_base_url}
     assert "api_key" not in response.text.lower()
+
+
+def test_token_report_page_includes_security_and_deep_telemetry_sections() -> None:
+    response = client.get(f"/token/{ADDRESS}")
+    assert response.status_code == 200
+    assert 'id="security-report"' in response.text
+    for source in ("rugcheck", "dexscreener", "dextools", "gmgn"):
+        assert f'data-security-source="{source}"' in response.text
+    for metric in (
+        "risk_level",
+        "safety_score",
+        "normalized_score",
+        "mint_authority_active",
+        "freeze_authority_active",
+        "mutable_metadata",
+        "holder_count",
+        "top_10_holders_pct",
+        "lp_locked_pct",
+        "bundled_supply_pct",
+    ):
+        assert f'data-security-value="{metric}"' in response.text
