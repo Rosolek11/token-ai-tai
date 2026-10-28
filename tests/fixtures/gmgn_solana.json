@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "security": {
+      "address": "So11111111111111111111111111111111111111112",
+      "is_honeypot": false,
+      "renounced_mint": true,
+      "renounced_freeze_account": true,
+      "burn_ratio": 0.915,
+      "top_10_holder_rate": 0.21,
+      "creator_percent": 0.025,
+      "bundler_rate": 0.042,
+      "sniper_count": 3,
+      "sniper_hold_rate": 0.015,
+      "dev_rug_history_count": 0,
+      "holder_count": 485210,
+      "buy_tax": 0.0,
+      "sell_tax": 0.0
+    }
+  }
+}

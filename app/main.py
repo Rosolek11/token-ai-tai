@@ -17,6 +17,11 @@ from app.market_data import (
     TokenMarketData,
     get_dexscreener_client,
 )
+from app.security_data import (
+    SecurityDataClient,
+    TokenSecurityData,
+    get_security_client,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -71,6 +76,7 @@ class AnalysisResponse(BaseModel):
 
 class TokenReportResponse(AnalysisResponse):
     market_data: TokenMarketData
+    security_data: TokenSecurityData | None = None
 
 
 @app.exception_handler(RequestValidationError)
@@ -127,6 +133,7 @@ def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
 def analyse_token(
     payload: AnalysisRequest,
     provider: DexScreenerClient = Depends(get_dexscreener_client),
+    security_provider: SecurityDataClient = Depends(get_security_client),
 ) -> TokenReportResponse:
     try:
         market_data = provider.fetch_token_market(payload.address)
@@ -135,6 +142,10 @@ def analyse_token(
     except MarketDataError as error:
         raise HTTPException(status_code=502, detail="MARKET_DATA_UNAVAILABLE") from error
 
+    security_data = security_provider.fetch_token_security(
+        payload.address, market_data=market_data
+    )
+
     return TokenReportResponse(
         id=str(uuid4()),
         subject_type="token",
@@ -142,7 +153,17 @@ def analyse_token(
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
         market_data=market_data,
+        security_data=security_data,
     )
+
+
+@app.get("/api/tokens/{address}/security", response_model=TokenSecurityData)
+def get_token_security_report(
+    address: str,
+    security_provider: SecurityDataClient = Depends(get_security_client),
+) -> TokenSecurityData:
+    validate_solana_address(address)
+    return security_provider.fetch_token_security(address)
 
 
 class TokenAnalysisResponse(BaseModel):
