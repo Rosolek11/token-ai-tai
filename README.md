@@ -126,3 +126,30 @@ zwolnienie blokady interakcji oraz powrot z pamieci przegladarki.
 - Sekretow, kluczy API i tokenow nie umieszczamy w repozytorium.
 
 Pelne zasady: [docs/zasady-zespolu.md](docs/zasady-zespolu.md).
+
+## Aktywnosc handlowa (TAI-11)
+
+`POST /analyses/token` dodaje w `market_data` oraz kazdej parze pola
+`buys_24h`, `sells_24h`, `transactions_24h` (suma kupna i sprzedazy).
+Wolumen USD i liczby transakcji dotycza tej samej wybranej pary, nie calego rynku.
+Brak jednej ze skladowych oznacza `transactions_24h: null`; zero pozostaje zerem.
+Przykladowy adres Solana i polecenie curl podano wyzej.
+
+Opcjonalne `gmgn_activity` zawiera `sniper_count`, zrodlo i czas pobrania UTC.
+Po ustawieniu `GMGN_API_KEY` serwer wykonuje wylacznie odczyt
+`GET https://openapi.gmgn.ai/v1/token/security?chain=sol&address=...`,
+z naglowkiem `X-APIKEY`, timestampem Unix i unikalnym `client_id`.
+Nie wymaga prywatnego klucza ani uprawnien do handlu.
+Statusy: `ok`, `no_data`, `not_configured` (bez klucza, bez zapytania),
+`unauthorized` (401/403), `rate_limited` (429), `unavailable` (inne bledy,
+timeout lub niepoprawna odpowiedz). Kazdy z nich pozwala zwrocic raport
+DexScreener; brak danych GMGN nie jest zamieniany na zero. Timeout wynosi 10 s,
+bez automatycznych ponowien po limicie.
+
+Kontrakt odczytu zweryfikowano na podstawie oficjalnego
+[klienta GMGN](https://github.com/GMGNAI/gmgn-skills/blob/main/src/client/OpenApiClient.ts)
+i [referencji metryk](https://github.com/GMGNAI/gmgn-skills/blob/main/skills/gmgn-token/SKILL.md).
+Dostep konkretnego konta wymaga klucza i odpowiedniego planu GMGN;
+testy 200/401/429 korzystaja z MockTransport, bez prawdziwych sekretow.
+`tests/test_trading_activity.py` sprawdza tez raport dla Wrapped SOL,
+brak danych, zera, brak klucza i timeout opcjonalnego dostawcy.

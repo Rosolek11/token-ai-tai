@@ -29,7 +29,13 @@ class MarketToken(BaseModel):
     symbol: str | None = None
 
 
+OptionalCount = Annotated[Annotated[int, Field(ge=0, strict=True)] | None, BeforeValidator(normalize_optional_number)]
+
+
 class MarketMetrics(BaseModel):
+    buys_24h: OptionalCount = None
+    sells_24h: OptionalCount = None
+    transactions_24h: OptionalCount = None
     price_usd: OptionalAmount = None
     liquidity_usd: OptionalAmount = None
     volume_24h_usd: OptionalAmount = None
@@ -66,7 +72,17 @@ class _PriceChange(BaseModel):
     h24: OptionalNumber = None
 
 
+class _Transactions(BaseModel):
+    buys: OptionalCount = None
+    sells: OptionalCount = None
+
+
+class _TransactionWindows(BaseModel):
+    h24: _Transactions | None = None
+
+
 class _DexScreenerPair(BaseModel):
+    txns: _TransactionWindows | None = None
     chain_id: str = Field(alias="chainId")
     dex_id: str = Field(alias="dexId")
     pair_address: str = Field(alias="pairAddress")
@@ -114,6 +130,14 @@ class DexScreenerClient:
                 url=pair.url,
                 base_token=pair.base_token,
                 quote_token=pair.quote_token,
+                buys_24h=pair.txns.h24.buys if pair.txns and pair.txns.h24 else None,
+                sells_24h=pair.txns.h24.sells if pair.txns and pair.txns.h24 else None,
+                transactions_24h=(
+                    pair.txns.h24.buys + pair.txns.h24.sells
+                    if pair.txns and pair.txns.h24
+                    and pair.txns.h24.buys is not None and pair.txns.h24.sells is not None
+                    else None
+                ),
                 price_usd=pair.price_usd,
                 liquidity_usd=pair.liquidity.usd if pair.liquidity else None,
                 volume_24h_usd=pair.volume.h24 if pair.volume else None,

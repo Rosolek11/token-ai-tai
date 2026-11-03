@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
+from app.trading_activity import GmgnActivity, GmgnClient, get_gmgn_client
 from app.config import Settings
 from app.market_data import (
     DexScreenerClient,
@@ -76,6 +77,7 @@ class AnalysisResponse(BaseModel):
 
 class TokenReportResponse(AnalysisResponse):
     market_data: TokenMarketData
+    gmgn_activity: GmgnActivity
     security_data: TokenSecurityData | None = None
 
 
@@ -133,6 +135,7 @@ def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
 def analyse_token(
     payload: AnalysisRequest,
     provider: DexScreenerClient = Depends(get_dexscreener_client),
+    gmgn: GmgnClient = Depends(get_gmgn_client),
     security_provider: SecurityDataClient = Depends(get_security_client),
 ) -> TokenReportResponse:
     try:
@@ -153,6 +156,7 @@ def analyse_token(
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
         market_data=market_data,
+        gmgn_activity=gmgn.fetch_activity(payload.address),
         security_data=security_data,
     )
 
