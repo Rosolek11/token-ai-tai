@@ -18,6 +18,11 @@ from app.market_data import (
     TokenMarketData,
     get_dexscreener_client,
 )
+from app.onchain_data import (
+    SolscanClient,
+    TokenOnChainData,
+    get_solscan_client,
+)
 from app.security_data import (
     SecurityDataClient,
     TokenSecurityData,
@@ -79,6 +84,7 @@ class TokenReportResponse(AnalysisResponse):
     market_data: TokenMarketData
     gmgn_activity: GmgnActivity
     security_data: TokenSecurityData | None = None
+    onchain_data: TokenOnChainData | None = None
 
 
 @app.exception_handler(RequestValidationError)
@@ -137,6 +143,7 @@ def analyse_token(
     provider: DexScreenerClient = Depends(get_dexscreener_client),
     gmgn: GmgnClient = Depends(get_gmgn_client),
     security_provider: SecurityDataClient = Depends(get_security_client),
+    solscan: SolscanClient = Depends(get_solscan_client),
 ) -> TokenReportResponse:
     try:
         market_data = provider.fetch_token_market(payload.address)
@@ -148,6 +155,7 @@ def analyse_token(
     security_data = security_provider.fetch_token_security(
         payload.address, market_data=market_data
     )
+    onchain_data = solscan.fetch_token_onchain(payload.address)
 
     return TokenReportResponse(
         id=str(uuid4()),
@@ -158,6 +166,7 @@ def analyse_token(
         market_data=market_data,
         gmgn_activity=gmgn.fetch_activity(payload.address),
         security_data=security_data,
+        onchain_data=onchain_data,
     )
 
 
@@ -168,6 +177,15 @@ def get_token_security_report(
 ) -> TokenSecurityData:
     validate_solana_address(address)
     return security_provider.fetch_token_security(address)
+
+
+@app.get("/api/tokens/{address}/onchain", response_model=TokenOnChainData)
+def get_token_onchain_report(
+    address: str,
+    solscan: SolscanClient = Depends(get_solscan_client),
+) -> TokenOnChainData:
+    validate_solana_address(address)
+    return solscan.fetch_token_onchain(address)
 
 
 class TokenAnalysisResponse(BaseModel):

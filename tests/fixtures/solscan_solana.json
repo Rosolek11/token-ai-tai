@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "success": true,
+    "data": {
+      "address": "So11111111111111111111111111111111111111112",
+      "name": "Wrapped SOL",
+      "symbol": "SOL",
+      "icon": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+      "decimals": 9,
+      "holder": 485210,
+      "creator": "11111111111111111111111111111111",
+      "create_tx": "5UfDuX7hXzN2B3yPq8m8V9jK1rT4z2wL8xY7vQ3nK9mP",
+      "created_time": 1600000000,
+      "mint_authority": null,
+      "freeze_authority": null,
+      "supply": "1000000000000000",
+      "circulating_supply": 1000000.0,
+      "price": 176.42,
+      "volume_24h": 48950231.18,
+      "market_cap": 176420000.0
+    }
+  },
+  "holders": {
+    "success": true,
+    "data": {
+      "total": 485210,
+      "items": [
+        {
+          "address": "HolderAcc1111111111111111111111111111111111",
+          "owner": "OwnerWal11111111111111111111111111111111111",
+          "amount": 120000000000000,
+          "decimals": 9,
+          "rank": 1,
+          "value": 21170400.0
+        },
+        {
+          "address": "HolderAcc2222222222222222222222222222222222",
+          "owner": "OwnerWal22222222222222222222222222222222222",
+          "amount": 80000000000000,
+          "decimals": 9,
+          "rank": 2,
+          "value": 14113600.0
+        },
+        {
+          "address": "HolderAcc3333333333333333333333333333333333",
+          "owner": "OwnerWal33333333333333333333333333333333333",
+          "amount": 50000000000000,
+          "decimals": 9,
+          "rank": 3,
+          "value": 8821000.0
+        },
+        {
+          "address": "HolderAcc4444444444444444444444444444444444",
+          "owner": "OwnerWal44444444444444444444444444444444444",
+          "amount": 40000000000000,
+          "decimals": 9,
+          "rank": 4,
+          "value": 7056800.0
+        },
+        {
+          "address": "HolderAcc5555555555555555555555555555555555",
+          "owner": "OwnerWal55555555555555555555555555555555555",
+          "amount": 35000000000000,
+          "decimals": 9,
+          "rank": 5,
+          "value": 6174700.0
+        },
+        {
+          "address": "HolderAcc6666666666666666666666666666666666",
+          "owner": "OwnerWal66666666666666666666666666666666666",
+          "amount": 30000000000000,
+          "decimals": 9,
+          "rank": 6,
+          "value": 5292600.0
+        },
+        {
+          "address": "HolderAcc7777777777777777777777777777777777",
+          "owner": "OwnerWal77777777777777777777777777777777777",
+          "amount": 25000000000000,
+          "decimals": 9,
+          "rank": 7,
+          "value": 4410500.0
+        },
+        {
+          "address": "HolderAcc8888888888888888888888888888888888",
+          "owner": "OwnerWal88888888888888888888888888888888888",
+          "amount": 20000000000000,
+          "decimals": 9,
+          "rank": 8,
+          "value": 3528400.0
+        },
+        {
+          "address": "HolderAcc9999999999999999999999999999999999",
+          "owner": "OwnerWal99999999999999999999999999999999999",
+          "amount": 15000000000000,
+          "decimals": 9,
+          "rank": 9,
+          "value": 2646300.0
+        },
+        {
+          "address": "HolderAcc1010101010101010101010101010101010",
+          "owner": "OwnerWal10101010101010101010101010101010101",
+          "amount": 10000000000000,
+          "decimals": 9,
+          "rank": 10,
+          "value": 1764200.0
+        }
+      ]
+    }
+  }
+}
