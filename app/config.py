@@ -14,6 +14,7 @@ class Settings:
     solscan_api_key: str | None
     gmgn_api_key: str | None
     ai_api_key: str | None
+    dextools_api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -35,4 +36,5 @@ class Settings:
             solscan_api_key=optional_secret("SOLSCAN_API_KEY"),
             gmgn_api_key=optional_secret("GMGN_API_KEY"),
             ai_api_key=optional_secret("AI_API_KEY"),
+            dextools_api_key=optional_secret("DEXTOOLS_API_KEY"),
         )

@@ -18,6 +18,11 @@ from app.market_data import (
     TokenMarketData,
     get_dexscreener_client,
 )
+from app.security_data import (
+    SecurityDataClient,
+    TokenSecurityData,
+    get_security_client,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -73,6 +78,7 @@ class AnalysisResponse(BaseModel):
 class TokenReportResponse(AnalysisResponse):
     market_data: TokenMarketData
     gmgn_activity: GmgnActivity
+    security_data: TokenSecurityData | None = None
 
 
 @app.exception_handler(RequestValidationError)
@@ -108,6 +114,12 @@ def analysis_page() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "analysis.html")
 
 
+@app.get("/token/{address}", include_in_schema=False)
+def token_report_page(address: str) -> FileResponse:
+    # Keep the address in the URL for direct visits and reloads.
+    return FileResponse(FRONTEND_DIR / "token.html")
+
+
 @app.post("/analyses/wallet", response_model=AnalysisResponse, status_code=201)
 def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
     return AnalysisResponse(
@@ -124,6 +136,7 @@ def analyse_token(
     payload: AnalysisRequest,
     provider: DexScreenerClient = Depends(get_dexscreener_client),
     gmgn: GmgnClient = Depends(get_gmgn_client),
+    security_provider: SecurityDataClient = Depends(get_security_client),
 ) -> TokenReportResponse:
     try:
         market_data = provider.fetch_token_market(payload.address)
@@ -131,6 +144,10 @@ def analyse_token(
         raise HTTPException(status_code=504, detail="MARKET_DATA_TIMEOUT") from error
     except MarketDataError as error:
         raise HTTPException(status_code=502, detail="MARKET_DATA_UNAVAILABLE") from error
+
+    security_data = security_provider.fetch_token_security(
+        payload.address, market_data=market_data
+    )
 
     return TokenReportResponse(
         id=str(uuid4()),
@@ -140,7 +157,17 @@ def analyse_token(
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
         market_data=market_data,
         gmgn_activity=gmgn.fetch_activity(payload.address),
+        security_data=security_data,
     )
+
+
+@app.get("/api/tokens/{address}/security", response_model=TokenSecurityData)
+def get_token_security_report(
+    address: str,
+    security_provider: SecurityDataClient = Depends(get_security_client),
+) -> TokenSecurityData:
+    validate_solana_address(address)
+    return security_provider.fetch_token_security(address)
 
 
 class TokenAnalysisResponse(BaseModel):

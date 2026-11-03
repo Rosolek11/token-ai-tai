@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050b17" />
+    <title>Token report — Token AI</title>
+    <meta name="description" content="Explore a source-backed market snapshot for a Solana token." />
+    <link rel="icon" href="/assets/logo.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/token.css" />
+    <link rel="stylesheet" href="/assets/report-intro.css" />
+    <script src="/assets/analysis-common.js" defer></script>
+    <script src="/assets/report-intro.js" defer></script>
+    <script src="/assets/token.js" defer></script>
+  </head>
+  <body class="token-page">
+    <div id="report-intro" class="report-intro" role="status" aria-label="Opening your token report. A three-second introduction.">
+      <div class="intro-grid" aria-hidden="true"></div><div class="intro-horizon" aria-hidden="true"></div><div class="intro-scanline" aria-hidden="true"></div>
+      <div class="intro-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="intro-topline" aria-hidden="true"><span><img src="/assets/logo.png" alt="" width="38" height="38" /> TAI / INTELLIGENCE LAYER</span><span>SOLANA <i></i> RESEARCH MODE</span></div>
+      <div class="intro-stage" aria-hidden="true">
+        <div class="intro-terminal intro-terminal--left"><p>TARGET / PUBLIC ADDRESS</p><code id="intro-address">SOLANA NETWORK</code><div class="intro-terminal__lines"><span></span><span></span><span></span><span></span><span></span></div><small>READ ONLY <i>↗</i></small></div>
+        <div class="intro-core">
+          <svg class="intro-connections" viewBox="0 0 640 640" fill="none"><path d="M0 210H102L154 262H230M640 420H538L486 368H410M80 560L201 439M560 80L439 201M0 420H100L153 367H230M640 210H540L487 263H410"/><circle cx="102" cy="210" r="4"/><circle cx="538" cy="420" r="4"/><circle cx="201" cy="439" r="4"/><circle cx="439" cy="201" r="4"/></svg>
+          <div class="intro-orbit intro-orbit--outer"></div><div class="intro-orbit intro-orbit--ticks"></div><div class="intro-orbit intro-orbit--middle"></div><div class="intro-orbit intro-orbit--inner"></div><div class="intro-orbit-plane"></div><div class="intro-sweep"></div>
+          <div class="intro-crosshair intro-crosshair--h"></div><div class="intro-crosshair intro-crosshair--v"></div>
+          <span class="intro-core__coordinate intro-core__coordinate--a">α / 01.006</span><span class="intro-core__coordinate intro-core__coordinate--b">λ / SIGNAL</span>
+          <div class="intro-logo"><img src="/assets/logo.png" alt="" width="600" height="600" /></div><span class="intro-node intro-node--a"></span><span class="intro-node intro-node--b"></span><span class="intro-node intro-node--c"></span>
+        </div>
+        <div class="intro-terminal intro-terminal--right"><p>INTERFACE SEQUENCE</p><ol><li><span>01</span> Establishing view <i>↗</i></li><li><span>02</span> Aligning layers <i>↗</i></li><li><span>03</span> Opening workspace <i>↗</i></li></ol><small>THREE SECONDS TO CLARITY</small></div>
+      </div>
+      <div class="intro-headline" aria-hidden="true"><p>THE WORLD MOVES FAST. FIND YOUR CONTEXT.</p><div><span>Beyond</span> <em>the noise.</em></div><small>YOUR RESEARCH STARTS HERE <span>↗</span></small></div>
+      <div class="intro-bottom" aria-hidden="true"><div class="intro-progress"><span></span></div><div><span>TAI / WORKSPACE INITIALIZATION</span><span>003 <i>→</i> 000</span></div></div>
+    </div>
+    <div id="report-app">
+    <a class="skip-link" href="#report-main">Skip to content</a>
+    <div class="ambient-grid" aria-hidden="true"></div>
+    <div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Token AI — home"><img class="brand-logo" src="/assets/logo.png" alt="" width="64" height="64" /><span class="brand-name">TOKEN<span>AI</span><small>INTELLIGENCE LAYER</small></span></a>
+      <nav class="report-nav" aria-label="Report navigation"><a href="/">Overview</a><a href="/analysis">New analysis <span aria-hidden="true">↗</span></a></nav>
+    </header>
+    <main class="report-shell section-wrap" id="report-main">
+      <div class="report-breadcrumb"><a href="/analysis">WORKSPACE</a><span>/</span><span>TOKEN REPORT</span><span class="report-network"><i></i> SOLANA MAINNET</span></div>
+      <section class="report-identity" aria-labelledby="report-title">
+        <div><p class="section-kicker">ON-CHAIN RESEARCH / 01</p><h1 id="report-title">Token report<span>.</span></h1><div class="report-address-row"><span class="report-address-label">CA</span><code id="report-address" tabindex="0"></code><button id="copy-address" class="report-copy" type="button" aria-label="Copy token address">Copy</button><span id="copy-feedback" class="sr-only" role="status"></span></div></div>
+        <div class="report-identity__actions"><span id="report-state-badge" class="report-state-badge" data-state="loading"><i></i><span id="report-state-label">CONNECTING</span></span><button id="refresh-report" class="report-refresh" type="button" disabled><span aria-hidden="true">↻</span> Refresh data</button></div>
+      </section>
+      <p id="report-status" class="report-status" role="status" aria-live="polite">Requesting current market data from DEX Screener.</p>
+      <div class="report-layout">
+        <section class="report-panel" id="report-stage" aria-label="Token market report" aria-busy="true">
+          <div class="report-panel__bar"><span><i></i> TAI / MARKET INTELLIGENCE</span><span>READ ONLY</span></div>
+          <div id="loading-state" class="report-loading">
+            <div class="report-scanner" aria-hidden="true"><div></div><div></div><span>TAI</span></div>
+            <p class="section-kicker">ESTABLISHING CONTEXT</p><h2>Reading the market<span>…</span></h2><p>Fetching trading pairs, liquidity and price activity.<br />Your report will appear here when the source responds.</p><div class="report-loading-track" aria-hidden="true"><span></span></div><span class="report-loading-note">DIRECT FROM SOURCE / NO ESTIMATED VALUES</span>
+            <div class="report-skeletons" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          </div>
+          <div id="error-state" class="report-error" role="alert" hidden><span class="report-error__icon" aria-hidden="true">!</span><p class="section-kicker">CONNECTION INTERRUPTED</p><h2 id="error-title">We couldn't load this report.</h2><p id="error-detail"></p><button id="retry-analysis" class="button button--primary" type="button"><span>Try again</span><span class="button-arrow" aria-hidden="true">↻</span></button><a href="/analysis">Use a different address ↗</a></div>
+          <div id="report-content" hidden>
+            <section id="market-report" class="market-report report-market" aria-labelledby="market-report-title">
+              <div class="market-report__heading"><div><p class="section-kicker">01 / MARKET SNAPSHOT</p><h2 id="market-report-title"><span id="report-token-name">Token market data</span></h2></div><span class="report-data-label">DEX SCREENER</span></div>
+              <div id="empty-market" class="report-notice" hidden><span aria-hidden="true">∅</span><div><h3>No trading pairs found.</h3><p>The source has no Solana pairs for this address. Check the contract address or try again later. Missing values are shown as “No data”.</p></div></div>
+              <div id="partial-market" class="report-partial" hidden>Some metrics are unavailable for the selected pair. Missing values are shown as “No data”, not zero.</div>
+              <dl class="market-metrics"><div class="market-metric"><dt><span>01</span> Price / USD</dt><dd data-market-value="price_usd">No data</dd><small>Selected pair · base token</small></div><div class="market-metric"><dt><span>02</span> Liquidity</dt><dd data-market-value="liquidity_usd">No data</dd><small>Selected trading pair</small></div><div class="market-metric"><dt><span>03</span> 24h volume</dt><dd data-market-value="volume_24h_usd">No data</dd><small>Rolling 24-hour window</small></div><div class="market-metric"><dt><span>04</span> 24h price change</dt><dd data-market-value="price_change_24h_percent">No data</dd><small>Base-token price movement</small></div></dl>
+              <div class="report-pair-summary"><span>PAIR SELECTION</span><p id="pair-summary"></p></div>
+              <div class="market-report__meta"><p>Retrieved <time data-market-value="updated_at">No data</time></p><a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Verify on DEX Screener ↗</a></div>
+            </section>
+            <section id="security-report" class="market-report report-market report-security" aria-labelledby="security-report-title">
+              <div class="market-report__heading">
+                <div>
+                  <p class="section-kicker">02 / SECURITY &amp; ON-CHAIN TELEMETRY</p>
+                  <h2 id="security-report-title">Security, audit &amp; deep token parameters</h2>
+                </div>
+                <div id="security-source-badges" class="security-sources-bar" aria-label="Security data sources">
+                  <span class="security-source-pill" data-security-source="rugcheck">RUGCHECK: <strong data-source-status="rugcheck">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="dexscreener">DEXSCREENER: <strong data-source-status="dexscreener">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="dextools">DEXTOOLS: <strong data-source-status="dextools">CHECKING</strong></span>
+                  <span class="security-source-pill" data-security-source="gmgn">GMGN AGENT: <strong data-source-status="gmgn">CHECKING</strong></span>
+                </div>
+              </div>
+              <div id="security-verdict-box" class="report-pair-summary security-verdict-box">
+                <span>AGGREGATED SECURITY SUMMARY (READ-ONLY)</span>
+                <p id="security-verdict">Evaluating on-chain security signals and provider availability…</p>
+              </div>
+              <h3 class="security-subheading">02A / RISK SCORE &amp; AUDIT VERDICT</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>01</span> Risk level</dt><dd data-security-value="risk_level">No data</dd><small>Normalized severity classification</small></div>
+                <div class="market-metric"><dt><span>02</span> Safety score</dt><dd data-security-value="safety_score">No data</dd><small>0–100 scale (higher is safer)</small></div>
+                <div class="market-metric"><dt><span>03</span> Normalized risk</dt><dd data-security-value="normalized_score">No data</dd><small>0–100 composite risk index</small></div>
+                <div class="market-metric"><dt><span>04</span> Raw RugCheck score</dt><dd data-security-value="risk_score">No data</dd><small>Provider risk points</small></div>
+                <div class="market-metric"><dt><span>05</span> Honeypot status</dt><dd data-security-value="is_honeypot">No data</dd><small>DexTools &amp; GMGN read-only check</small></div>
+                <div class="market-metric"><dt><span>06</span> Rugged flag</dt><dd data-security-value="rugged">No data</dd><small>RugCheck historical flag</small></div>
+                <div class="market-metric"><dt><span>07</span> DEXTscore</dt><dd data-security-value="dextools_score">No data</dd><small>DexTools audit score</small></div>
+                <div class="market-metric"><dt><span>08</span> Detected signals</dt><dd data-security-value="flags_counts">No data</dd><small>Critical / Warning / Safe</small></div>
+              </dl>
+              <h3 class="security-subheading">02B / CONTRACT AUTHORITIES &amp; TAXES</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>09</span> Mint authority</dt><dd data-security-value="mint_authority_active">No data</dd><small data-security-value="mint_authority">Minting permission state</small></div>
+                <div class="market-metric"><dt><span>10</span> Freeze authority</dt><dd data-security-value="freeze_authority_active">No data</dd><small data-security-value="freeze_authority">Account freeze permission</small></div>
+                <div class="market-metric"><dt><span>11</span> Mutable metadata</dt><dd data-security-value="mutable_metadata">No data</dd><small data-security-value="update_authority">Metadata modification state</small></div>
+                <div class="market-metric"><dt><span>12</span> Token standard</dt><dd data-security-value="token_program">No data</dd><small>SPL Token / Token-2022</small></div>
+                <div class="market-metric"><dt><span>13</span> Transfer fee %</dt><dd data-security-value="transfer_fee_pct">No data</dd><small>On-chain transfer fee</small></div>
+                <div class="market-metric"><dt><span>14</span> Buy / Sell tax</dt><dd data-security-value="buy_sell_tax">No data</dd><small>Audit tax percentages</small></div>
+                <div class="market-metric"><dt><span>15</span> Open source / Proxy</dt><dd data-security-value="contract_verification">No data</dd><small>Verified source &amp; proxy check</small></div>
+                <div class="market-metric"><dt><span>16</span> Blacklist / Scam check</dt><dd data-security-value="blacklist_scam_check">No data</dd><small>Blacklist &amp; scam flags</small></div>
+              </dl>
+              <h3 class="security-subheading">02C / HOLDERS, INSIDERS &amp; BUNDLING</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>17</span> Total holders</dt><dd data-security-value="holder_count">No data</dd><small>Unique token accounts</small></div>
+                <div class="market-metric"><dt><span>18</span> Top 1 holder %</dt><dd data-security-value="top_holder_pct">No data</dd><small data-security-value="top_holder_address">Largest wallet share</small></div>
+                <div class="market-metric"><dt><span>19</span> Top 5 holders %</dt><dd data-security-value="top_5_holders_pct">No data</dd><small>Top 5 concentration</small></div>
+                <div class="market-metric"><dt><span>20</span> Top 10 holders %</dt><dd data-security-value="top_10_holders_pct">No data</dd><small>Top 10 concentration</small></div>
+                <div class="market-metric"><dt><span>21</span> Creator share %</dt><dd data-security-value="creator_balance_pct">No data</dd><small data-security-value="creator_address">Deployer held supply</small></div>
+                <div class="market-metric"><dt><span>22</span> Insider networks</dt><dd data-security-value="insider_summary">No data</dd><small>Graph insiders &amp; supply %</small></div>
+                <div class="market-metric"><dt><span>23</span> Bundled supply %</dt><dd data-security-value="bundled_supply_pct">No data</dd><small>GMGN bundler ratio</small></div>
+                <div class="market-metric"><dt><span>24</span> Snipers &amp; dev rugs</dt><dd data-security-value="snipers_and_rugs">No data</dd><small>Sniper wallets &amp; rug history</small></div>
+              </dl>
+              <h3 class="security-subheading">02D / LIQUIDITY LOCKS &amp; DEEP MARKET TELEMETRY</h3>
+              <dl class="market-metrics security-metrics-grid">
+                <div class="market-metric"><dt><span>25</span> Total DEX liquidity</dt><dd data-security-value="total_market_liquidity_usd">No data</dd><small>Aggregated across Solana pools</small></div>
+                <div class="market-metric"><dt><span>26</span> LP locked %</dt><dd data-security-value="lp_locked_pct">No data</dd><small>Locked liquidity ratio</small></div>
+                <div class="market-metric"><dt><span>27</span> LP burned %</dt><dd data-security-value="lp_burned_pct">No data</dd><small>Burned LP tokens ratio</small></div>
+                <div class="market-metric"><dt><span>28</span> Locked / Unlocked USD</dt><dd data-security-value="lp_locked_usd">No data</dd><small data-security-value="lp_providers_count">LP lock valuation</small></div>
+                <div class="market-metric"><dt><span>29</span> FDV / Market Cap</dt><dd data-security-value="fdv_mcap">No data</dd><small>Fully diluted &amp; market cap</small></div>
+                <div class="market-metric"><dt><span>30</span> Volume (5m / 1h / 6h)</dt><dd data-security-value="short_term_volume">No data</dd><small>Multi-window trading volume</small></div>
+                <div class="market-metric"><dt><span>31</span> Price Δ (5m / 1h / 6h)</dt><dd data-security-value="short_term_price_change">No data</dd><small>Multi-window price momentum</small></div>
+                <div class="market-metric"><dt><span>32</span> 24h Buys / Sells</dt><dd data-security-value="txns_buys_sells_24h">No data</dd><small data-security-value="buy_sell_ratio_24h">Order flow balance</small></div>
+                <div class="market-metric"><dt><span>33</span> 1h &amp; 5m Buys / Sells</dt><dd data-security-value="txns_short_term">No data</dd><small>Recent transaction flow</small></div>
+                <div class="market-metric"><dt><span>34</span> Pair age &amp; boosts</dt><dd data-security-value="pair_age_boosts">No data</dd><small data-security-value="dex_list">Pool maturity &amp; DEXes</small></div>
+                <div class="market-metric"><dt><span>35</span> Supply &amp; decimals</dt><dd data-security-value="supply_decimals">No data</dd><small>Total supply &amp; precision</small></div>
+                <div class="market-metric"><dt><span>36</span> Verification &amp; links</dt><dd data-security-value="verification_status">No data</dd><small data-security-value="social_links">Jupiter, RugCheck &amp; socials</small></div>
+              </dl>
+              <div class="security-lists-wrap">
+                <div class="security-Flags-panel">
+                  <h3 class="security-subheading">02E / NORMALIZED SECURITY FLAGS (<span id="security-flags-count">0</span>)</h3>
+                  <ul id="security-flags-list" class="security-flags-list">
+                    <li class="security-flag-item" data-severity="info"><span>INFO</span><div><strong>Waiting for security telemetry</strong><small>Normalized flags from RugCheck, DexScreener, DexTools and GMGN will appear here.</small></div></li>
+                  </ul>
+                </div>
+                <div class="security-holders-panel">
+                  <h3 class="security-subheading">02F / TOP HOLDERS BREAKDOWN</h3>
+                  <ul id="top-holders-list" class="security-flags-list">
+                    <li class="security-flag-item" data-severity="info"><span>HOLDERS</span><div><strong>No holder breakdown loaded</strong><small>Top wallet concentrations will be listed when available.</small></div></li>
+                  </ul>
+                </div>
+              </div>
+              <div class="market-report__meta">
+                <p>Security &amp; AI telemetry <strong id="security-overall-status">READ-ONLY</strong></p>
+                <a data-rugcheck-source href="https://rugcheck.xyz" target="_blank" rel="noopener noreferrer">Verify on RugCheck ↗</a>
+              </div>
+            </section>
+          </div>
+        </section>
+        <aside class="report-context" aria-label="Report context">
+          <section class="report-context-card"><div class="report-context-card__title"><p class="section-kicker">THE SIGNAL PATH</p><span aria-hidden="true">✦</span></div><ol class="report-steps"><li><span>01</span><div><strong>Public address</strong><small>No wallet connection required</small></div><i class="is-ready"></i></li><li><span>02</span><div><strong>Market snapshot</strong><small id="source-state">Waiting for DEX Screener</small></div><i id="source-led"></i></li><li><span>03</span><div><strong>Security &amp; audit</strong><small id="security-source-state">RugCheck · DexTools · GMGN</small></div><i id="security-source-led"></i></li><li class="is-planned"><span>04</span><div><strong>AI interpretation</strong><small>36+ parameters ready for AI</small></div><span class="report-later">NEXT</span></li></ol></section>
+          <section class="report-context-card report-reading-note"><p class="section-kicker">KNOW WHAT YOU'RE READING</p><h2>A snapshot.<br /><em>With a source.</em></h2><p>Metrics come from one trading pair selected by liquidity. They are not totals across every exchange.</p><p>Retrieved time records when we fetched the data. You can verify the source below the metrics.</p><a href="/analysis">Explore another address <span aria-hidden="true">↗</span></a></section>
+        </aside>
+      </div>
+      <footer class="report-footer"><span>TAI / BUILT FOR CLARITY</span><p>Research information, not financial advice.</p><a href="/analysis">NEW ANALYSIS ↗</a></footer>
+      <noscript><p>Enable JavaScript to retrieve market data for this address.</p></noscript>
+    </main>
+    </div>
+    <noscript><style>.report-intro{display:none!important}</style></noscript>
+  </body>
+</html>

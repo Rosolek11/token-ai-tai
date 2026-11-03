@@ -1,0 +1,97 @@
+{
+  "mint": "So11111111111111111111111111111111111111112",
+  "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "creator": "JEKNVnkbo3jma5nREBBJCDoXFVeKkD56V3xKrvRmWxFG",
+  "creatorBalance": 25000000.0,
+  "token": {
+    "mintAuthority": null,
+    "supply": 1000000000,
+    "decimals": 9,
+    "isInitialized": true,
+    "freezeAuthority": null
+  },
+  "tokenMeta": {
+    "name": "Wrapped SOL",
+    "symbol": "SOL",
+    "uri": "https://solana.com/metadata.json",
+    "mutable": false,
+    "updateAuthority": "11111111111111111111111111111111"
+  },
+  "topHolders": [
+    {
+      "address": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+      "amount": 125000000,
+      "decimals": 9,
+      "pct": 12.5,
+      "uiAmount": 125000000.0,
+      "owner": "JEKNVnkbo3jma5nREBBJCDoXFVeKkD56V3xKrvRmWxFG",
+      "insider": false
+    },
+    {
+      "address": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
+      "amount": 85000000,
+      "decimals": 9,
+      "pct": 8.5,
+      "uiAmount": 85000000.0,
+      "owner": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "insider": true
+    }
+  ],
+  "freezeAuthority": null,
+  "mintAuthority": null,
+  "risks": [
+    {
+      "name": "Top 10 holders concentration",
+      "value": "21.0%",
+      "description": "Top 10 holders hold 21% of total token supply.",
+      "score": 100,
+      "level": "low"
+    }
+  ],
+  "score": 100,
+  "score_normalised": 12.5,
+  "fileMeta": {
+    "description": "Wrapped Solana native token used across DeFi pools.",
+    "name": "Wrapped SOL",
+    "symbol": "SOL",
+    "image": "https://solana.com/logo.png"
+  },
+  "lockers": {
+    "locker_1": {
+      "programID": "Lock111111111111111111111111111111111111111",
+      "usdcLocked": 25000000.0
+    }
+  },
+  "markets": [
+    {
+      "pubkey": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+      "marketType": "orca",
+      "lp": {
+        "lpLockedPct": 94.5,
+        "lpLockedUSD": 28002853.77,
+        "lpUnlocked": 1629795.72
+      }
+    }
+  ],
+  "totalMarketLiquidity": 30632649.49,
+  "totalLPProviders": 142,
+  "totalHolders": 485210,
+  "rugged": false,
+  "transferFee": {
+    "pct": 0.0,
+    "maxAmount": 0,
+    "authority": null
+  },
+  "verification": {
+    "jup_verified": true,
+    "jup_strict": true,
+    "description": "Verified on Jupiter strict list"
+  },
+  "graphInsidersDetected": 1,
+  "insiderNetworks": [
+    {
+      "id": "net-1",
+      "size": 3
+    }
+  ]
+}
