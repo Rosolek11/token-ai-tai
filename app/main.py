@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.trading_activity import GmgnActivity, GmgnClient, get_gmgn_client
 from app.config import Settings
+from app.local_research import LocalResearchClient, get_local_research_client
+from app.listing_data import ListingClient, ListingStatus, get_listing_client
 from app.market_data import (
     DexScreenerClient,
     MarketDataError,
@@ -177,6 +179,25 @@ def get_token_security_report(
 ) -> TokenSecurityData:
     validate_solana_address(address)
     return security_provider.fetch_token_security(address)
+
+
+@app.get('/api/tokens/{address}/listing', response_model=ListingStatus)
+def get_listing_status(address: str, provider: ListingClient = Depends(get_listing_client)) -> ListingStatus:
+    validate_solana_address(address)
+    return provider.fetch(address)
+
+
+@app.get('/api/research-config')
+def get_research_config() -> dict[str, str]:
+    # Partner IDs are public domain identifiers, not API secrets.
+    from os import environ
+    return {'bubblemapsPartnerId': environ.get('BUBBLEMAPS_PARTNER_ID', 'demo').strip() or 'demo'}
+
+
+@app.get('/api/tokens/{address}/local-research')
+def get_local_research(address: str, provider: LocalResearchClient = Depends(get_local_research_client)) -> dict:
+    validate_solana_address(address)
+    return provider.fetch(address)
 
 
 @app.get("/api/tokens/{address}/onchain", response_model=TokenOnChainData)

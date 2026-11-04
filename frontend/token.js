@@ -34,6 +34,7 @@ async function loadReport() {
     return;
   }
   inFlight = true;
+  window.ReportWorkspace?.render(null, true);
   setReportState('loading', 'Requesting current market data from DEX Screener.');
   try {
     const base = await TokenAI.apiBase();
@@ -45,6 +46,7 @@ async function loadReport() {
       throw new Error('The source returned an incomplete report. Please try again.');
     }
     TokenAI.updateMarketReport(result, reportAddress);
+    window.ReportWorkspace?.render(result);
     const empty = market.status === 'no_data' || market.pairs.length === 0;
     document.getElementById('empty-market').hidden = !empty;
     document.getElementById('partial-market').hidden = empty || ['price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent'].every(key => TokenAI.parseMarketNumber(market[key]) !== null);
@@ -59,6 +61,7 @@ async function loadReport() {
     if (secStateEl) secStateEl.textContent = secStatus === 'ok' ? 'All security sources ready' : secStatus === 'partial' ? 'Partial security telemetry' : 'Unavailable / limited sources';
     if (secLedEl) secLedEl.className = ['ok', 'partial'].includes(secStatus) ? 'is-ready' : '';
   } catch (error) {
+    window.ReportWorkspace?.render(null);
     document.getElementById('error-title').textContent = "We couldn't load this report.";
     document.getElementById('error-detail').textContent = error.message || 'The analysis service is unavailable. Please try again.';
     setReportState('error', 'Your address is preserved. Retry when the source is available.');
