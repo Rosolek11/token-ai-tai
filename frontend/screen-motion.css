@@ -1,0 +1,13 @@
+/* The overlay never intercepts input; all movement is transform + opacity. */
+.screen-choreography{position:absolute;inset:28px 0 0;z-index:30;overflow:hidden;pointer-events:none;contain:paint;isolation:isolate}
+.screen-choreography>i{position:absolute;inset:0;display:block;opacity:0;pointer-events:none}
+.screen-choreography .motion-ribbon{background:linear-gradient(112deg,transparent 30%,#3e80e810 43%,#5eabff45 49%,#84c6ff19 51%,transparent 66%)}
+.screen-choreography .motion-trace{background:linear-gradient(112deg,transparent 48.6%,#b1dbff99 49%,transparent 49.25%);inset:12% -10%}
+.screen-choreography .motion-glint{inset:auto -15% 0;height:1px;background:linear-gradient(90deg,transparent,#4e8fffb3,transparent)}
+.screen-motion-toggle{font:500 11px var(--display);letter-spacing:.04em;border:1px solid #5278ac88;border-radius:20px;background:#10203955;color:#b4ceed;padding:7px 11px;cursor:pointer;white-space:nowrap}
+.screen-motion-toggle[aria-pressed=false]{color:#7e91a8;background:transparent}
+.screen-motion-toggle:focus-visible{outline:2px solid #8ab9ff;outline-offset:4px}
+.workspace-ready[data-screen-motion] .workspace-pane{animation:none!important;transform-origin:50% 35%}
+.workspace-ready[data-screen-motion] .report-panel__bar{align-items:center;gap:16px}
+.workspace-ready[data-screen-motion] .report-panel__bar>span:first-child{margin-right:auto}
+@media(max-width:760px){.screen-motion-toggle{font-size:10px;padding:6px 9px}.workspace-ready[data-screen-motion] .report-panel__bar{gap:9px}.screen-choreography{inset:30px 0 0}}

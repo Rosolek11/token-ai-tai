@@ -98,7 +98,7 @@ sie z zewnetrznym API.
 Testy zachowania JavaScript (Node.js 24, bez dodatkowych pakietow):
 
 ```bash
-node --test tests/market_report.test.cjs tests/report_intro.test.cjs
+node --test tests/market_report.test.cjs tests/report_intro.test.cjs tests/report_workspace.test.cjs
 ```
 
 Uruchamiaja wspolny kod, formularz i strone raportu z mockami DOM i HTTP: sprawdzaja
@@ -118,6 +118,35 @@ Osobny test sprawdza granice 2999/3000 ms,
 zwolnienie blokady interakcji oraz powrot z pamieci przegladarki.
 
 ## Konwencje pracy
+
+Wyglad raportu: warstwa `frontend/observatory.css` obejmuje tylko terminal
+raportu. Overview jest skrotem; komplet pomiarow jest w osobnym All signals.
+Na desktopie wysokosc aplikacji odpowiada viewportowi, a dluzsze ekrany maja
+wlasny obszar przewijania. Na telefonie zachowano naturalne przewijanie.
+Na wyrazne wymaganie pelnej animacji przejscia maja domyslny tryb Motion: Full
+(osobny od preferencji systemu). Przycisk Motion w pasku ekranu przelacza na
+Calm, natychmiast zatrzymuje ruch i zapamietuje wybor lokalnie. Tryb Full trwa
+okolo 490 ms: 90 ms wyjscia, warstwowe wejscie 340 ms, opoznienia do 60 ms
+i 380 ms impulsu. Kolejne klikniecie anuluje poprzednie przejscie; nie ma kolejki.
+Animowane sa transform i opacity, bez kopiowania iframe lub duzych snapshotow.
+Trzysekundowe intro zachowuje swoj osobny, wczesniej uzgodniony tryb ruchu.
+
+Signal deck i Bubble map rozszerzaja raport o metryki dystrybucji i widget
+Bubblemaps. Otworz http://localhost:8000 (demo iframe nie obsluguje domen produkcyjnych).
+Definicje, ograniczenia Axiom, brak kosztu nabycia holderow i konfiguracja dostepu:
+[dostep do danych](docs/data-access.md). API `/api/tokens/{address}/listing`
+sprawdza zatwierdzone profile DEX Screener, nie utozsamiajac reklam z profilem.
+
+TAI-10: raport ma dwanascie niezaleznych ekranow (Overview, All signals,
+Market, Warnings, Contract, Holders, Liquidity, Activity, Audit scores,
+Sources, Bubble map, Local engine). Wybor zapisuje sie w hashu URL;
+nawigacja obsluguje strzalki, Home i End. Na desktopie przewija sie tylko
+zawartosc wybranego ekranu, nie wielosekcyjny raport. Na telefonie karty
+nawigacji przewijaja sie poziomo, a tresc zachowuje naturalna wysokosc.
+Warnings sortuje flagi wedlug powagi, pokazuje wyjasnienia i linki do zrodel,
+udostepnia filtry i osobno sygnalizuje brak danych kazdego dostawcy.
+Sam DEX Screener nie stanowi audytu; bez danych audytowych poziom to UNKNOWN.
+Widoczna klasyfikacja jest obserwacja dostawcy, nie wynikiem modelu AI.
 
 - Nie commitujemy bezposrednio do `main`.
 - Branch: `feature/<krotki-opis>`, `fix/<krotki-opis>`, `docs/<krotki-opis>`.

@@ -1,0 +1,60 @@
+/* Seven rooms, one research workspace. Ink, electric blue, technical typography. */
+.workspace-ready .report-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}
+.workspace-ready .report-shell{max-width:1600px;padding-top:30px}
+.workspace-ready .report-identity{margin-bottom:14px}
+.workspace-ready .report-identity h1{font-size:clamp(28px,3vw,44px)}
+.workspace-ready .report-footer{margin-top:20px}
+.workspace-nav{display:grid;gap:8px;position:sticky;top:22px;padding:12px 0}
+.workspace-tab{position:relative;display:flex;align-items:center;gap:14px;min-height:66px;padding:16px;border:1px solid #193249;background:linear-gradient(120deg,#0d1d2e,#07111f);color:#8097ad;cursor:pointer;text-align:left;transition:background .3s,transform .3s,border-color .3s}
+.workspace-tab span{font:500 10px var(--display);color:#4f7c9c}.workspace-tab strong{font:600 13px var(--display);letter-spacing:.04em}.workspace-tab i{font-style:normal;margin-left:auto;color:#47789a}
+.workspace-tab:hover{transform:translateX(4px);border-color:#387aa7}.workspace-tab[aria-selected=true]{color:#e5f7ff;background:linear-gradient(115deg,#123b5a,#0a1f34);border-color:#3c98cc;box-shadow:inset 3px 0 #65d9ff,0 8px 32px #0003}.workspace-tab[aria-selected=true] span,.workspace-tab[aria-selected=true] i{color:#65d9ff}
+.workspace-tab:focus-visible,.warning-filters button:focus-visible,.workspace-pane:focus-visible{outline:2px solid #65d9ff;outline-offset:4px}
+.workspace-pane[hidden]{display:none!important}.workspace-pane{min-width:0;animation:workspace-enter .45s cubic-bezier(.16,1,.3,1) both}
+.workspace-title{font:500 clamp(28px,3vw,44px)/1.1 var(--display);letter-spacing:-.045em;margin:12px 0 24px}
+.workspace-ready #report-content{min-width:0;height:clamp(500px,65vh,800px);overflow:auto;scrollbar-width:thin;scrollbar-color:#285674 #07121f;scrollbar-gutter:stable;padding:clamp(18px,2.5vw,38px)}
+.workspace-ready #security-report{margin:0;padding:0;border:0;background:none}.workspace-ready .report-market{margin:0;padding:0}
+.workspace-ready .security-metrics-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:24px}.workspace-ready .market-metric{padding:20px 16px;background:linear-gradient(145deg,#0c2133a6,#07121f80);border:1px solid #1a3346}
+.workspace-ready .market-metric dd{font-size:clamp(15px,1.6vw,24px);overflow-wrap:anywhere}.workspace-ready .market-metric small{font-size:10px}
+.warning-summary{display:grid;grid-template-columns:220px minmax(0,1fr);gap:30px;align-items:center;padding:25px;border:1px solid #28516e;background:radial-gradient(ellipse at 8% 50%,#123b5255,transparent 70%);position:relative;overflow:hidden}
+.warning-summary:after{content:'';position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,#65d9ff,transparent)}
+.warning-dial{aspect-ratio:1;max-width:210px;border:1px solid #32617d;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:repeating-conic-gradient(from 0deg,#387e9f44 0deg 1deg,transparent 1deg 12deg);box-shadow:inset 0 0 0 12px #071624,inset 0 0 0 13px #224259,inset 0 0 0 25px #081827}
+.warning-dial strong{font:600 27px var(--display);color:#65d9ff}.warning-dial span{font:600 8px var(--display);letter-spacing:.17em}.warning-dial small{font:500 6px var(--display);letter-spacing:.06em;color:#82a1b4}
+.warning-summary[data-risk=critical] .warning-dial strong,.warning-summary[data-risk=high] .warning-dial strong{color:#ff8a92}.warning-summary[data-risk=medium] .warning-dial strong{color:#f3c57e}.warning-explanation{font-size:clamp(16px,1.6vw,22px);line-height:1.6;color:#cfdfeb;max-width:700px}.coverage-note{font-size:11px;color:#edc58e;margin-top:16px;line-height:1.7}
+.warning-filters{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 12px}.warning-filters button{border:1px solid #28465b;background:#0a1928;color:#a7bdcc;padding:10px 14px;font:500 10px var(--display);cursor:pointer}.warning-filters button[aria-pressed=true]{background:#183e58;color:#9ae7ff;border-color:#65d9ff}.warning-count{font:500 10px var(--display);color:#7f9db3;margin:16px 0}
+.workspace-ready .security-flags-list{max-height:none;overflow:visible;padding:0;display:grid;gap:10px;list-style:none}.workspace-ready .security-flag-item,.source-notes .security-flag-item{display:grid;grid-template-columns:85px minmax(0,1fr);gap:20px;align-items:start;padding:20px;background:#0a1b2a;border:1px solid #203c50;border-left:2px solid #4fa9da;list-style:none}.workspace-ready .security-flag-item[data-severity=critical],.workspace-ready .security-flag-item[data-severity=high]{border-left-color:#ff7786;background:linear-gradient(110deg,#401e2b66,#0b1a29)}.workspace-ready .security-flag-item[data-severity=warn]{border-left-color:#edbf78}.workspace-ready .security-flag-item>span{font:600 9px var(--display);color:#b4d2e5;padding-top:3px}.workspace-ready .security-flag-item strong{display:block;font-size:14px}.workspace-ready .security-flag-item small{display:block;color:#8facbf;line-height:1.7;font-size:12px;margin-top:8px}.flag-source{display:inline-block;font:600 9px var(--display);letter-spacing:.09em;color:#65d9ff;margin-top:12px}.source-notes{display:grid;gap:12px;margin-top:24px}.workspace-ready .report-context{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.workspace-ready .security-sources-bar{justify-content:flex-start}
+@keyframes workspace-enter{from{opacity:0;transform:translate3d(20px,8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@media(max-width:1100px){.workspace-ready .security-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.warning-summary{grid-template-columns:160px 1fr;gap:20px}.warning-dial strong{font-size:22px}.warning-dial{gap:10px}.workspace-ready .report-layout{grid-template-columns:160px minmax(0,1fr)}}
+@media(max-width:760px){.workspace-ready .report-layout{display:block}.workspace-nav{position:static;display:flex;overflow-x:auto;padding:8px 0 16px;gap:8px}.workspace-tab{min-width:132px;min-height:54px;padding:12px;gap:9px}.workspace-ready #report-content{height:auto;min-height:420px;max-height:none;overflow:visible;padding:18px}.warning-summary{grid-template-columns:1fr;padding:20px}.warning-dial{width:170px;justify-self:center}.warning-explanation{font-size:16px}.workspace-ready .report-context{grid-template-columns:1fr}.workspace-ready .security-flag-item{grid-template-columns:1fr;gap:8px}.workspace-ready .report-address-row{min-width:0}.workspace-ready .report-address-row code{overflow-wrap:anywhere}.workspace-title{font-size:32px}}
+@media(prefers-reduced-motion:reduce){.workspace-pane{animation:none}.workspace-tab{transition:none}}
+.workspace-ready #report-stage{background:linear-gradient(140deg,rgba(11,31,48,.95),rgba(4,14,26,.96));box-shadow:0 24px 80px #0003}
+.workspace-ready .report-panel__bar{flex-shrink:0;background:linear-gradient(90deg,#12354a66,transparent);font-size:8px;letter-spacing:.14em}
+.workspace-title{position:relative}.workspace-title:after{content:'↗';position:absolute;right:0;top:0;font-size:28px;font-weight:400;color:#285e7d}
+.warning-summary{border-radius:2px}.warning-dial{position:relative}.warning-dial:after{content:'';position:absolute;inset:5px;border-radius:50%;border:1px solid transparent;border-top-color:#65d9ff88;border-right-color:#65d9ff44;pointer-events:none;transform:rotate(-30deg)}
+.workspace-ready .security-flag-item{padding:15px 18px;border-radius:2px;transition:border-color .2s,background .2s}
+.workspace-ready .security-flag-item:hover{border-color:#3b6b89;background-color:#10293c}
+.workspace-ready .security-flag-item>span{font-size:8px;letter-spacing:.08em}
+.workspace-ready .security-flag-item strong{font:600 12px var(--display);line-height:1.6}
+.workspace-ready .security-flag-item small{margin-top:5px;font-size:11px}
+.flag-source{margin-top:8px;font-size:8px}.source-notes{padding:0;list-style:none}
+.workspace-nav{scrollbar-width:thin;scrollbar-color:#296182 transparent}
+@media(min-width:761px){
+  .workspace-ready #report-app>.site-header{height:70px;min-height:70px;padding-block:8px}
+  .workspace-ready .brand-logo{width:46px;height:46px}
+  .workspace-ready .report-shell{height:calc(100dvh - 70px);min-height:650px;display:flex;flex-direction:column;padding-block:16px}
+  .workspace-ready .report-breadcrumb{margin-bottom:16px}
+  .workspace-ready .report-identity{margin-block:0 8px;padding:0;gap:18px}
+  .workspace-ready .report-identity .section-kicker{margin-bottom:6px}
+  .workspace-ready .report-identity h1{margin:0 0 8px;font-size:32px}
+  .workspace-ready .report-status{margin:8px 0 16px}
+  .workspace-ready .report-layout{flex:1;min-height:0}
+  .workspace-ready #report-stage{height:100%;min-height:0;display:flex;flex-direction:column}
+  .workspace-ready #report-content{height:auto;min-height:0;flex:1}
+  .workspace-ready .workspace-nav{padding:0;gap:6px}
+  .workspace-ready .workspace-tab{min-height:46px;padding:10px 12px}
+  .workspace-ready .report-footer{margin-top:12px;padding-top:12px}
+  .workspace-ready .warning-summary{padding:18px;grid-template-columns:150px minmax(0,1fr);gap:24px}
+  .workspace-ready .warning-dial{width:150px;gap:10px}
+  .workspace-ready .warning-dial strong{font-size:24px}
+  .workspace-ready .warning-explanation{font-size:15px;margin:8px 0}
+  .workspace-ready .workspace-title{font-size:32px;margin:8px 0 20px}
+}

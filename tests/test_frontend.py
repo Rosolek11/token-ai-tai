@@ -55,6 +55,13 @@ def test_client_config_does_not_expose_secrets() -> None:
     assert "api_key" not in response.text.lower()
 
 
+def test_workspace_assets_are_served_and_linked() -> None:
+    page = client.get(f"/token/{ADDRESS}").text
+    for asset in ("report-workspace.js", "report-workspace.css", "token-lens.js", "token-lens.css", "observatory.css", "screen-motion.js", "screen-motion.css"):
+        assert f"/assets/{asset}" in page
+        assert client.get(f"/assets/{asset}").status_code == 200
+
+
 def test_token_report_page_includes_security_and_deep_telemetry_sections() -> None:
     response = client.get(f"/token/{ADDRESS}")
     assert response.status_code == 200
