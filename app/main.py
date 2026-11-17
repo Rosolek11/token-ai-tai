@@ -147,13 +147,24 @@ def analyse_token(
     gmgn: GmgnClient = Depends(get_gmgn_client),
     security_provider: SecurityDataClient = Depends(get_security_client),
     solscan: SolscanClient = Depends(get_solscan_client),
+    allow_partial: bool = False,
 ) -> TokenReportResponse:
     try:
         market_data = provider.fetch_token_market(payload.address)
-    except MarketDataTimeout as error:
-        raise HTTPException(status_code=504, detail="MARKET_DATA_TIMEOUT") from error
     except MarketDataError as error:
-        raise HTTPException(status_code=502, detail="MARKET_DATA_UNAVAILABLE") from error
+        timed_out = isinstance(error, MarketDataTimeout)
+        if not allow_partial:
+            raise HTTPException(
+                status_code=504 if timed_out else 502,
+                detail="MARKET_DATA_TIMEOUT" if timed_out else "MARKET_DATA_UNAVAILABLE",
+            ) from error
+        market_data = TokenMarketData(
+            source_url=f"{DexScreenerClient.BASE_URL}/{payload.address}",
+            status="unavailable",
+            reason="timeout" if timed_out else "source_error",
+            updated_at=None,
+            pairs=[],
+        )
 
     security_data = security_provider.fetch_token_security(
         payload.address, market_data=market_data

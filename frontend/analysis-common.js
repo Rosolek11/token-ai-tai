@@ -14,9 +14,9 @@ window.TokenAI = (() => {
     while (value > 0n) { bytes += 1; value >>= 8n; }
     return address.match(/^1*/)[0].length + bytes === 32;
   }
-  async function requestJson(url, options = {}) {
+  async function requestJson(url, options = {}, timeoutMs = 15000) {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
       let result;
@@ -159,6 +159,13 @@ window.TokenAI = (() => {
     setVal('mint_authority', auth.mint_authority ? `Authority: ${shortenAddress(auth.mint_authority)}` : 'Minting permission state');
     setVal('freeze_authority_active', formatBoolFlag(auth.freeze_authority_active, 'ACTIVE (Risk)', 'Renounced'), auth.freeze_authority_active === true ? 'down' : auth.freeze_authority_active === false ? 'up' : '');
     setVal('freeze_authority', auth.freeze_authority ? `Authority: ${shortenAddress(auth.freeze_authority)}` : 'Account freeze permission');
+    const holderFacts = window.ReportWorkspace?.holderModel(result);
+    for (const kind of ['mint','freeze']) {
+      if (holderFacts?.[kind].source !== 'Solscan') continue;
+      setVal(kind + '_authority_active', 'ACTIVE (Risk)', 'down');
+      const address = result.onchain_data.metadata[kind + '_authority'];
+      setVal(kind + '_authority', `Authority: ${shortenAddress(address)} · Solscan`);
+    }
     setVal('mutable_metadata', formatBoolFlag(auth.mutable_metadata, 'Mutable', 'Immutable'), auth.mutable_metadata === true ? 'down' : auth.mutable_metadata === false ? 'up' : '');
     setVal('update_authority', auth.update_authority ? `Update auth: ${shortenAddress(auth.update_authority)}` : 'Metadata modification state');
     setVal('token_program', auth.is_token_2022 === true ? 'Token-2022' : auth.is_token_2022 === false ? 'SPL Token' : auth.token_program ? shortenAddress(auth.token_program) : 'No data');

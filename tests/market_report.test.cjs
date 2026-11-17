@@ -22,7 +22,7 @@ function page(fetchHandler = async () => { throw new Error('Unexpected request')
     'market-report', 'loading-state', 'error-state', 'report-content', 'refresh-report',
     'retry-analysis', 'copy-address', 'report-address', 'report-stage', 'report-state-badge',
     'report-state-label', 'report-status', 'source-state', 'source-led', 'error-title',
-    'error-detail', 'empty-market', 'partial-market', 'report-token-name', 'pair-summary', 'copy-feedback',
+    'error-detail', 'empty-market', 'market-unavailable', 'partial-market', 'report-token-name', 'pair-summary', 'copy-feedback',
     'security-report', 'security-verdict', 'security-flags-count', 'security-flags-list',
     'top-holders-list', 'security-overall-status', 'security-source-state', 'security-source-led'];
   const elements = Object.fromEntries(names.map(name => [name, element()]));
@@ -71,6 +71,38 @@ function page(fetchHandler = async () => { throw new Error('Unexpected request')
     submit() { return elements['analysis-form'].listeners.submit({ preventDefault() {} }); },
     metric: key => elements['market-report'].children[`[data-market-value="${key}"]`].textContent,
   };
+}
+
+function mountWorkspace({ context, elements }) {
+  function addTree(parent, tagName) {
+    parent.tagName = tagName;
+    parent.nodes = [];
+    parent.children[Symbol.iterator] = () => parent.nodes.values();
+    parent.append = (...nodes) => parent.nodes.push(...nodes);
+    parent.prepend = (...nodes) => parent.nodes.unshift(...nodes);
+    parent.replaceChildren = (...nodes) => { parent.nodes = nodes; };
+    parent.before = () => {};
+    parent.querySelectorAll = () => [];
+    parent.classList = {
+      add: name => { parent.className = name; },
+      contains: name => parent.className.split(' ').includes(name),
+    };
+    const query = parent.querySelector.bind(parent);
+    parent.querySelector = selector => query(selector) || parent.nodes.find(node => node.tagName === selector);
+    return parent;
+  }
+  Object.values(elements).forEach(el => addTree(el));
+  const body = addTree(element(), 'body');
+  body.style = { setProperty() {} };
+  Object.assign(context.document, {
+    body,
+    createElement: tag => addTree(element(), tag),
+    querySelector: () => undefined,
+  });
+  context.location.hash = '';
+  context.history = { replaceState(_state, _unused, hash) { context.location.hash = hash; } };
+  vm.runInContext(read('report-workspace.js'), context);
+  return id => elements['security-report'].nodes.find(node => node.id === 'screen-' + id);
 }
 const config = () => ({ ok: true, json: async () => ({ apiBaseUrl: '' }) });
 const data = (market = {}) => ({
@@ -202,7 +234,7 @@ test('direct report visit and page reload use the address in the URL', async () 
     }, '/token/' + address);
     await current.report();
     assert.equal(current.elements['report-address'].textContent, address);
-    assert.equal(calls[1].url, 'https://token.example.test/analyses/token');
+    assert.equal(calls[1].url, 'https://token.example.test/analyses/token?allow_partial=true');
     assert.equal(calls[1].options.method, 'POST');
     assert.deepEqual(JSON.parse(calls[1].options.body), {address});
     assert.equal(current.metric('price_usd'), '$106.65');
@@ -219,6 +251,65 @@ test('no pairs show a distinct empty state with no invented zeros', async () => 
   assert.equal(current.elements['report-content'].hidden, false);
   assert.equal(current.elements['partial-market'].hidden, true);
   assert.equal(current.metric('price_usd'), 'No data');
+});
+
+test('complete report renders Solscan fixture and keeps other sections visible through provider outages', async () => {
+  const security = {
+    overall_status: 'partial',
+    sources: { rugcheck: { status: 'ok' } },
+    risk_summary: { risk_level: 'high' },
+    authorities: { mint_authority_active: false },
+    market_activity: { total_supply: 5000 },
+    holder_distribution: { holder_count: 52, top_10_holders_pct: 23 },
+  };
+  const snapshots = [
+    {
+      ...data(),
+      security_data: security,
+      onchain_data: {
+        status: 'partial',
+        supply: { ui_amount: 4200, decimals: 9 },
+        metadata: { mint_authority: null, freeze_authority: address },
+        holder_count: 50,
+        holder_sample: { sample_size: 1, top_10_count: 1, top_10_share_percent: 25, calculation_basis: 'total_supply' },
+        holders: [{ owner: address, ui_amount: 1050, share_percent: 25 }],
+      },
+    },
+    {
+      ...data({ status:'unavailable', reason:'timeout', pairs:[], price_usd:null, updated_at:null }),
+      security_data: security,
+      onchain_data: { status:'not_configured', reason:'missing_api_key' },
+    },
+  ];
+  const current = page(async url => url === '/api/client-config' ? config() : url.includes('/ai-analysis') ? ok({status:'not_configured'}) : ok(snapshots.shift()), '/token/' + address);
+  const screen = mountWorkspace(current);
+  const contents = node => [node.textContent, ...(node.nodes || []).flatMap(contents)].join(' ');
+
+  await current.report();
+  const overview = contents(screen('intelligence'));
+  assert.match(overview, /Market \$106\.65/);
+  assert.match(overview, /Warnings HIGH/);
+  assert.match(overview, /Holders 50/);
+  assert.match(overview, /Sources 3 \/ 5/);
+  const holders = contents(screen('holders'));
+  assert.match(holders, /Total supply 4,200 Solscan/);
+  assert.match(holders, /Mint authority Renounced/);
+  assert.match(holders, /Freeze authority Active Solscan/);
+  assert.match(holders, /Top 10 concentration 25% Solscan holder sample/);
+  assert.match(holders, /1 sampled · 50 reported holders.*Holders included in Top 10: 1/);
+  assert.match(holders, new RegExp(address + '\\s+1,050 25%'));
+
+  await current.context.loadReport();
+  assert.equal(current.elements['report-content'].hidden, false);
+  assert.equal(current.elements['error-state'].hidden, true);
+  assert.equal(current.elements['market-unavailable'].hidden, false);
+  assert.equal(current.elements['empty-market'].hidden, true);
+  assert.equal(current.elements['report-state-badge'].dataset.state, 'partial');
+  assert.match(contents(screen('intelligence')), /Market No data.*Warnings HIGH.*Holders 52/);
+  assert.match(contents(screen('holders')), /Total supply 5,000 Security aggregation.*Top 10 concentration 23%/);
+  assert.match(contents(screen('holders')), /Freeze authority No data/);
+  assert.match(contents(screen('sources')), /DEX Screener \/ unavailable.*Solscan \/ not_configured/);
+  assert.doesNotMatch(contents(screen('holders')), /4,200|1,050|25%/);
 });
 test('partial metrics retain real zero and disclose missing metrics', async () => {
   let calls = 0;
