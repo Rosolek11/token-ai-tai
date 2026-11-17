@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.trading_activity import GmgnActivity, GmgnClient, get_gmgn_client
 from app.config import Settings
+from app.ai_analysis import AIAnalysisClient, AIAnalysisResult, get_ai_client
 from app.local_research import LocalResearchClient, get_local_research_client
 from app.listing_data import ListingClient, ListingStatus, get_listing_client
 from app.market_data import (
@@ -179,6 +180,17 @@ def get_token_security_report(
 ) -> TokenSecurityData:
     validate_solana_address(address)
     return security_provider.fetch_token_security(address)
+
+
+@app.post("/api/tokens/{address}/ai-analysis", response_model=AIAnalysisResult)
+def analyse_token_facts(
+    address: str,
+    security_provider: SecurityDataClient = Depends(get_security_client),
+    ai: AIAnalysisClient = Depends(get_ai_client),
+) -> AIAnalysisResult:
+    validate_solana_address(address)
+    report = security_provider.fetch_token_security(address)
+    return ai.analyse(report.normalized_data)
 
 
 @app.get('/api/tokens/{address}/listing', response_model=ListingStatus)

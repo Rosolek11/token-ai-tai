@@ -204,3 +204,26 @@ Dotychczasowe pola raportu pozostają dostępne dla interfejsu.
 Przykładowy adres: `So11111111111111111111111111111111111111112` (Wrapped SOL).
 `tests/test_source_data.py` sprawdza mapowanie zapisanych fixture czterech
 źródeł, jednostki, URL i czas, a także brak danych, zero i `false`, bez sieci.
+
+### Przekazanie faktów do AI (TAI-20)
+
+`POST /api/tokens/{address}/ai-analysis` pobiera raport bezpieczeństwa i przekazuje
+wyłącznie liczbowe/logiczne fakty z `normalized_data` oraz ich `sourceId`.
+Przykładowy adres: `So11111111111111111111111111111111111111112`.
+Nazwy pól i źródła przechodzą przez listy dozwolonych wartości; teksty dostawców,
+HTML, URL-e, dowolne rekordy i dynamiczne nazwy ryzyk nie są wysyłane do modelu.
+Zera i `false` pozostają faktami. Wartości nieznane są pomijane.
+
+Ustaw serwerowy `AI_API_KEY`, aby włączyć wywołania OpenAI (model `gpt-4o-mini`).
+Klucz służy wyłącznie do nagłówka autoryzacji transportu, nigdy do promptu.
+Wersja promptu: `tai-20-v1`, limit serializowanych wiadomości: 16384 bajty
+(łącznie z instrukcją systemową), timeout operacji HTTP: 15 sekund, bez ponowień,
+limit odpowiedzi: 1000 tokenów. Przekroczenie limitu odrzuca całe wejście.
+Timeout HTTP dotyczy operacji connect/read/write/pool, nie całego pobierania źródeł.
+
+Odpowiedź zawiera `status`, `prompt_version` i opcjonalną `analysis`.
+Statusy: `completed`, `no_data`, `not_configured`, `input_too_large`, `timeout`,
+`unavailable`. Brak faktów lub konfiguracji nie wywołuje modelu.
+Treść odpowiedzi modelu należy traktować jako niezaufany tekst i wyświetlać
+przez `textContent`, nigdy jako HTML. Endpoint nie zmienia kolejki `/api/token-analyses`.
+Testy korzystają z transportu mock, bez płatnych wywołań i dostępu do sieci.
