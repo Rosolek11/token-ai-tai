@@ -10,9 +10,9 @@ function showMessage(text, state) {
 }
 
 function formatUsd(value) {
-  if (value === null || value === undefined || value === '') return 'Brak danych';
+  if (value === null || value === undefined || value === '') return 'No data';
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return 'Brak danych';
+  if (!Number.isFinite(amount)) return 'No data';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -21,17 +21,74 @@ function formatUsd(value) {
 }
 
 function formatPercent(value) {
-  if (value === null || value === undefined || value === '') return 'Brak danych';
+  if (value === null || value === undefined || value === '') return 'No data';
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return 'Brak danych';
+  if (!Number.isFinite(amount)) return 'No data';
   return `${new Intl.NumberFormat('en-US', { signDisplay: 'always', maximumFractionDigits: 2 }).format(amount)}%`;
 }
 
 function formatUpdatedAt(value) {
-  if (!value) return 'Brak danych';
+  if (!value) return 'No data';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Brak danych';
-  return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  if (Number.isNaN(date.getTime())) return 'No data';
+  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function formatCount(value) {
+  if (value === null || value === undefined || value === '') return 'No data';
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 0) return 'No data';
+  return new Intl.NumberFormat('en-US').format(count);
+}
+
+function getSourceUrl(marketData, address) {
+  const fallbackUrl = `https://dexscreener.com/solana/${encodeURIComponent(address)}`;
+  if (typeof marketData.source_url !== 'string') return fallbackUrl;
+  try {
+    const parsedUrl = new URL(marketData.source_url);
+    return parsedUrl.protocol === 'https:' ? parsedUrl.href : fallbackUrl;
+  } catch {
+    return fallbackUrl;
+  }
+}
+
+function updateActivityReport(marketData, address) {
+  const activityReport = document.getElementById('activity-report');
+  const activityTable = activityReport.querySelector('[data-activity-table]');
+  const emptyMessage = activityReport.querySelector('[data-activity-empty]');
+  const windows = ['m5', 'h1', 'h6', 'h24'];
+  let hasActivityData = false;
+
+  windows.forEach((windowName) => {
+    const row = activityReport.querySelector(`[data-activity-window="${windowName}"]`);
+    const transactions = marketData.txns?.[windowName] || {};
+    const volume = marketData.volume?.[windowName];
+    const buys = Number.isInteger(Number(transactions.buys)) && transactions.buys !== null && transactions.buys !== ''
+      ? Number(transactions.buys)
+      : null;
+    const sells = Number.isInteger(Number(transactions.sells)) && transactions.sells !== null && transactions.sells !== ''
+      ? Number(transactions.sells)
+      : null;
+    const volumeValue = volume === null || volume === undefined || volume === '' || !Number.isFinite(Number(volume))
+      ? null
+      : Number(volume);
+    const hasWindowData = buys !== null || sells !== null || volumeValue !== null;
+
+    row.hidden = !hasWindowData;
+    if (!hasWindowData) return;
+
+    hasActivityData = true;
+    row.querySelector('[data-activity-value="buys"]').textContent = formatCount(buys);
+    row.querySelector('[data-activity-value="sells"]').textContent = formatCount(sells);
+    row.querySelector('[data-activity-value="volume"]').textContent = formatUsd(volumeValue);
+  });
+
+  activityTable.hidden = !hasActivityData;
+  emptyMessage.hidden = hasActivityData;
+  const activitySource = activityReport.querySelector('[data-activity-source]');
+  const sourceUrl = getSourceUrl(marketData, address);
+  activitySource.href = sourceUrl;
+  activitySource.textContent = sourceUrl.includes('dexscreener.com') ? 'Open DEX Screener source ↗' : 'Open data source ↗';
 }
 
 function updateMarketReport(result, address, subjectType) {
@@ -49,18 +106,10 @@ function updateMarketReport(result, address, subjectType) {
   report.querySelector('[data-market-value="updated_at"]').textContent = formatUpdatedAt(marketData.updated_at);
 
   const sourceLink = report.querySelector('[data-market-source]');
-  const fallbackUrl = `https://dexscreener.com/solana/${encodeURIComponent(address)}`;
-  let sourceUrl = fallbackUrl;
-  if (typeof marketData.source_url === 'string') {
-    try {
-      const parsedUrl = new URL(marketData.source_url);
-      if (parsedUrl.protocol === 'https:') sourceUrl = parsedUrl.href;
-    } catch {
-      sourceUrl = fallbackUrl;
-    }
-  }
+  const sourceUrl = getSourceUrl(marketData, address);
   sourceLink.href = sourceUrl;
-  sourceLink.textContent = sourceUrl === fallbackUrl ? 'Open DEX Screener source ↗' : 'Open data source ↗';
+  sourceLink.textContent = sourceUrl.includes('dexscreener.com') ? 'Open DEX Screener source ↗' : 'Open data source ↗';
+  updateActivityReport(marketData, address);
   report.hidden = false;
 }
 

@@ -49,13 +49,29 @@
             <span class="market-report__badge">READ ONLY</span>
           </div>
           <dl class="market-metrics">
-            <div class="market-metric"><dt>Price</dt><dd data-market-value="price_usd">Brak danych</dd></div>
-            <div class="market-metric"><dt>Liquidity</dt><dd data-market-value="liquidity_usd">Brak danych</dd></div>
-            <div class="market-metric"><dt>24h volume</dt><dd data-market-value="volume_24h_usd">Brak danych</dd></div>
-            <div class="market-metric"><dt>24h price change</dt><dd data-market-value="price_change_24h_percent">Brak danych</dd></div>
+            <div class="market-metric"><dt>Price</dt><dd data-market-value="price_usd">No data</dd></div>
+            <div class="market-metric"><dt>Liquidity</dt><dd data-market-value="liquidity_usd">No data</dd></div>
+            <div class="market-metric"><dt>24h volume</dt><dd data-market-value="volume_24h_usd">No data</dd></div>
+            <div class="market-metric"><dt>24h price change</dt><dd data-market-value="price_change_24h_percent">No data</dd></div>
           </dl>
+          <section id="activity-report" class="activity-report" aria-labelledby="activity-report-title">
+            <h3 id="activity-report-title">Transactions and volume</h3>
+            <p class="activity-empty" data-activity-empty>No transaction or volume data is available.</p>
+            <div class="activity-table-wrap" data-activity-table hidden>
+              <table class="activity-table">
+                <thead><tr><th scope="col">Window</th><th scope="col">Buys</th><th scope="col">Sells</th><th scope="col">Volume (USD)</th></tr></thead>
+                <tbody>
+                  <tr data-activity-window="m5" hidden><th scope="row">5 min</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
+                  <tr data-activity-window="h1" hidden><th scope="row">1 hour</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
+                  <tr data-activity-window="h6" hidden><th scope="row">6 hours</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
+                  <tr data-activity-window="h24" hidden><th scope="row">24 hours</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="activity-meta"><span>Data source</span><a data-activity-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Open DEX Screener source ↗</a></div>
+          </section>
           <div class="market-report__meta">
-            <p>Last updated <time data-market-value="updated_at">Brak danych</time></p>
+            <p>Last updated <time data-market-value="updated_at">No data</time></p>
             <a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Open DEX Screener source ↗</a>
           </div>
         </section>

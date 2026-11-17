@@ -31,6 +31,12 @@ def test_analysis_page_serves_address_form() -> None:
     assert 'data-market-value="price_change_24h_percent"' in response.text
     assert 'data-market-value="updated_at"' in response.text
     assert 'data-market-source' in response.text
+    assert 'id="activity-report"' in response.text
+    assert 'data-activity-window="m5"' in response.text
+    assert 'data-activity-window="h1"' in response.text
+    assert 'data-activity-window="h6"' in response.text
+    assert 'data-activity-window="h24"' in response.text
+    assert 'data-activity-source' in response.text
 
 
 def test_frontend_assets_are_available() -> None:
@@ -59,8 +65,23 @@ def test_market_report_formats_metrics_and_handles_missing_data() -> None:
     assert "formatUsd(marketData.volume_24h_usd)" in response.text
     assert "formatPercent(marketData.price_change_24h_percent)" in response.text
     assert "formatUpdatedAt(marketData.updated_at)" in response.text
-    assert "Brak danych" in response.text
+    assert "No data" in response.text
+    assert "Brak danych" not in response.text
+    assert "en-GB" in response.text
     assert "dexscreener.com/solana" in response.text
+
+
+def test_activity_report_handles_partial_and_missing_data_without_defaulting_to_zero() -> None:
+    response = client.get("/assets/analysis.js")
+    assert response.status_code == 200
+    assert "marketData.txns?.[windowName]" in response.text
+    assert "marketData.volume?.[windowName]" in response.text
+    assert "const hasWindowData = buys !== null || sells !== null || volumeValue !== null;" in response.text
+    assert "row.hidden = !hasWindowData" in response.text
+    assert "emptyMessage.hidden = hasActivityData" in response.text
+    assert "formatCount(buys)" in response.text
+    assert "formatCount(sells)" in response.text
+    assert "formatUsd(volumeValue)" in response.text
 
 
 def test_client_config_does_not_expose_secrets() -> None:
