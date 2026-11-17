@@ -218,7 +218,22 @@ def analyse_token_facts(
 ) -> AIAnalysisResult:
     validate_solana_address(address)
     report = security_provider.fetch_token_security(address)
-    return ai.analyse(report.normalized_data)
+    try:
+        return ai.analyse(report.normalized_data, address=address)
+    except TypeError:
+        return ai.analyse(report.normalized_data)
+
+
+@app.get("/api/tokens/{address}/ai-analysis", response_model=AIAnalysisResult)
+def get_saved_token_ai_analysis(
+    address: str,
+    ai: AIAnalysisClient = Depends(get_ai_client),
+) -> AIAnalysisResult:
+    validate_solana_address(address)
+    saved = ai.store.get_latest(address)
+    if saved is None:
+        return AIAnalysisResult(address=address, status="no_data")
+    return saved
 
 
 @app.get('/api/tokens/{address}/listing', response_model=ListingStatus)

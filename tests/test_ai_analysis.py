@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 from types import SimpleNamespace
 
@@ -71,7 +72,12 @@ def test_transport(outcome, expected):
             return httpx.Response(503)
         if outcome == 'invalid':
             return httpx.Response(200, json={})
-        return httpx.Response(200, json={'choices': [{'message': {'content': 'Analiza (dexscreener).'}}]})
+        content = json.dumps({
+            'score': 72,
+            'summary': 'Analiza (dexscreener).',
+            'fact_ids': ['price.price_usd'],
+        })
+        return httpx.Response(200, json={'choices': [{'message': {'content': content}}]})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         result = AIAnalysisClient(client, 'secret').analyse(data())
     assert result.status == expected
@@ -80,17 +86,126 @@ def test_transport(outcome, expected):
 
 def test_solana_endpoint_with_normalized_report():
     def handler(request):
-        return httpx.Response(200, json={'choices': [{'message': {'content': 'Dane źródłowe: dexscreener.'}}]})
+        content = json.dumps({
+            'score': 80,
+            'summary': 'Dane źródłowe: dexscreener.',
+            'fact_ids': ['dexscreener:price.price_usd'],
+        })
+        return httpx.Response(200, json={'choices': [{'message': {'content': content}}]})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         ai = AIAnalysisClient(client, 'secret')
         app.dependency_overrides[get_ai_client] = lambda: ai
         app.dependency_overrides[get_security_client] = lambda: SimpleNamespace(
             fetch_token_security=lambda address: SimpleNamespace(normalized_data=data()))
         try:
+            before = datetime.now(timezone.utc)
             response = TestClient(app).post(f'/api/tokens/{ADDRESS}/ai-analysis')
+            after = datetime.now(timezone.utc)
             assert response.status_code == 200
-            assert response.json()['status'] == 'completed'
+            body = response.json()
+            assert body['status'] == 'completed'
+            assert body['address'] == ADDRESS
+            assert body['prompt_version'] == PROMPT_VERSION
+            assert body['score'] == 80
+            assert body['fact_ids'] == ['price.price_usd']
+            assert body['analysis'] == 'Dane źródłowe: dexscreener.'
+            analysed_at = datetime.fromisoformat(body['analysed_at'].replace('Z', '+00:00'))
+            assert before <= analysed_at <= after
+            assert len(ai.store) == 1
+            saved = ai.store.get_latest(ADDRESS)
+            assert saved is not None
+            assert saved.prompt_version == PROMPT_VERSION
+            assert saved.analysed_at == analysed_at
+            assert saved.score == 80
+            assert saved.fact_ids == ['price.price_usd']
+
+            get_res = TestClient(app).get(f'/api/tokens/{ADDRESS}/ai-analysis')
+            assert get_res.status_code == 200
+            assert get_res.json()['id'] == body['id']
             assert TestClient(app).post('/api/tokens/invalid/ai-analysis').status_code == 422
         finally:
             app.dependency_overrides.pop(get_ai_client)
             app.dependency_overrides.pop(get_security_client)
+
+
+@pytest.mark.parametrize('score', [0, 0.0, 50.5, 100, 100.0])
+def test_valid_score_boundaries_and_reasons_fact_id_format_are_saved(score):
+    source = data(106.65)
+    source.flags['gmgn:gmgn_honeypot'] = SourceValue(
+        value=False, unit='signal', sourceId='gmgn'
+    )
+    payload = {
+        'score': score,
+        'summary': 'Brak oznak honeypota wg GMGN oraz znana cena DEX Screener.',
+        'reasons': [
+            {'factId': 'price.price_usd', 'text': 'Cena USD z DEX Screener'},
+            {'factId': 'gmgn:gmgn_honeypot', 'text': 'Flaga honeypot false'},
+        ],
+    }
+    with httpx.Client(
+        transport=httpx.MockTransport(
+            lambda r: httpx.Response(
+                200, json={'choices': [{'message': {'content': json.dumps(payload)}}]}
+            )
+        )
+    ) as client:
+        ai = AIAnalysisClient(client, 'secret')
+        result = ai.analyse(source, address=ADDRESS)
+
+    assert result.status == 'completed'
+    assert result.rejected is False
+    assert result.score == score
+    assert result.fact_ids == ['price.price_usd', 'flags.gmgn:gmgn_honeypot']
+    assert result.prompt_version == PROMPT_VERSION
+    assert result.analysed_at is not None
+    assert len(ai.saved_analyses) == 1
+    assert ai.saved_analyses[0].id == result.id
+
+
+@pytest.mark.parametrize(
+    ('raw_content', 'expected_reason'),
+    [
+        ('Analiza bez formatu JSON.', 'invalid_json'),
+        ('{"score": 50, "summary": "uciety json"', 'invalid_json'),
+        ('[{"score": 50, "summary": "lista zamiast obiektu"}]', 'invalid_json'),
+        ('123', 'invalid_json'),
+        ('{"score": NaN, "summary": "nan", "fact_ids": ["price.price_usd"]}', 'invalid_json'),
+        (json.dumps({'score': -1, 'summary': 'Ujemny wynik', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': -0.01, 'summary': 'Ujemny float', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': 100.01, 'summary': 'Ponad 100', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': 101, 'summary': 'Ponad 100', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': True, 'summary': 'Bool jako score', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': '50', 'summary': 'String jako score', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'summary': 'Brak pola score', 'fact_ids': ['price.price_usd']}), 'invalid_score_range'),
+        (json.dumps({'score': 50, 'summary': 'Nieznany factId', 'fact_ids': ['price.fake_metric']}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': 'Fakt nieobecny w wejsciu', 'fact_ids': ['holders.holder_count']}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': 'Jeden poprawny i jeden halucynowany', 'fact_ids': ['price.price_usd', 'flags.rugcheck:mint_authority']}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': 'Pusta lista fact_ids', 'fact_ids': []}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': 'Liczba zamiast factId', 'fact_ids': [123]}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': 'Brak jakichkolwiek fact_ids'}), 'invalid_fact_id'),
+        (json.dumps({'score': 50, 'summary': '   ', 'fact_ids': ['price.price_usd']}), 'invalid_schema'),
+        (json.dumps({'score': 50, 'fact_ids': ['price.price_usd']}), 'invalid_schema'),
+    ],
+)
+def test_negative_invalid_model_responses_are_rejected_and_not_saved(
+    raw_content: str, expected_reason: str
+) -> None:
+    with httpx.Client(
+        transport=httpx.MockTransport(
+            lambda r: httpx.Response(
+                200, json={'choices': [{'message': {'content': raw_content}}]}
+            )
+        )
+    ) as client:
+        ai = AIAnalysisClient(client, 'secret')
+        result = ai.analyse(data(106.65), address=ADDRESS)
+
+    assert result.status == 'unavailable'
+    assert result.rejected is True
+    assert result.reason == expected_reason
+    assert result.analysis is None
+    assert result.score is None
+    assert result.fact_ids == []
+    assert result.analysed_at is None
+    assert len(ai.store) == 0
+    assert ai.store.get_latest(ADDRESS) is None
