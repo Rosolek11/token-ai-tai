@@ -4,6 +4,7 @@ const reportContent = document.getElementById('report-content');
 const refreshButton = document.getElementById('refresh-report');
 const retryButton = document.getElementById('retry-analysis');
 const copyButton = document.getElementById('copy-address');
+const marketUnavailable = document.getElementById('market-unavailable');
 let reportAddress = '';
 let inFlight = false;
 try { reportAddress = decodeURIComponent(window.location.pathname.split('/')[2] || ''); }
@@ -13,12 +14,12 @@ document.getElementById('report-address').textContent = reportAddress || 'Invali
 function setReportState(state, text) {
   loadingState.hidden = state !== 'loading';
   errorState.hidden = state !== 'error';
-  reportContent.hidden = !['ready', 'no_data'].includes(state);
+  reportContent.hidden = !['ready', 'no_data', 'partial'].includes(state);
   document.getElementById('report-stage').setAttribute('aria-busy', String(state === 'loading'));
   document.getElementById('report-state-badge').dataset.state = state;
-  document.getElementById('report-state-label').textContent = { loading: 'CONNECTING', ready: 'SNAPSHOT READY', no_data: 'NO PAIRS FOUND', error: 'UNAVAILABLE' }[state];
+  document.getElementById('report-state-label').textContent = { loading: 'CONNECTING', ready: 'SNAPSHOT READY', no_data: 'NO PAIRS FOUND', partial: 'PARTIAL REPORT', error: 'UNAVAILABLE' }[state];
   document.getElementById('report-status').textContent = text;
-  document.getElementById('source-state').textContent = { loading: 'Waiting for DEX Screener', ready: 'Snapshot retrieved', no_data: 'Source returned no pairs', error: 'Could not retrieve data' }[state];
+  document.getElementById('source-state').textContent = { loading: 'Waiting for DEX Screener', ready: 'Snapshot retrieved', no_data: 'Source returned no pairs', partial: 'Market data unavailable', error: 'Could not retrieve data' }[state];
   document.getElementById('source-led').className = state === 'ready' ? 'is-ready' : state === 'loading' ? 'is-loading' : '';
   refreshButton.disabled = state === 'loading' || !TokenAI.isSolanaAddress(reportAddress);
   retryButton.disabled = state === 'loading' || !TokenAI.isSolanaAddress(reportAddress);
@@ -38,23 +39,28 @@ async function loadReport() {
   setReportState('loading', 'Requesting current market data from DEX Screener.');
   try {
     const base = await TokenAI.apiBase();
-    const result = await TokenAI.requestJson(`${base}/analyses/token`, {
+    const result = await TokenAI.requestJson(`${base}/analyses/token?allow_partial=true`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: reportAddress }),
-    });
+    }, 90000);
     const market = result?.market_data;
-    if (result?.address !== reportAddress || result?.subject_type !== 'token' || !market || !['ok', 'no_data'].includes(market.status) || !Array.isArray(market.pairs)) {
+    if (result?.address !== reportAddress || result?.subject_type !== 'token' || !market || !['ok', 'no_data', 'unavailable'].includes(market.status) || !Array.isArray(market.pairs)) {
       throw new Error('The source returned an incomplete report. Please try again.');
     }
     TokenAI.updateMarketReport(result, reportAddress);
     window.ReportWorkspace?.render(result);
-    const empty = market.status === 'no_data' || market.pairs.length === 0;
+    const unavailable = market.status === 'unavailable';
+    const empty = !unavailable && (market.status === 'no_data' || market.pairs.length === 0);
+    marketUnavailable.hidden = !unavailable;
     document.getElementById('empty-market').hidden = !empty;
-    document.getElementById('partial-market').hidden = empty || ['price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent'].every(key => TokenAI.parseMarketNumber(market[key]) !== null);
+    document.getElementById('partial-market').hidden = unavailable || empty || ['price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent'].every(key => TokenAI.parseMarketNumber(market[key]) !== null);
     const primary = market.pairs.find(pair => pair.pair_address === market.primary_pair_address);
     const token = primary?.base_token;
     document.getElementById('report-token-name').textContent = token?.symbol ? `${token.symbol} / Market snapshot` : 'Token market data';
-    document.getElementById('pair-summary').textContent = empty ? 'No market pair is available for this address.' : primary ? `${market.pairs.length} pair${market.pairs.length === 1 ? '' : 's'} found · selected ${primary.dex_id || 'DEX'} pair by highest known liquidity.` : 'No base-token pair available. Source pairs are quote-token pairs, so summary metrics are unavailable.';
-    setReportState(empty ? 'no_data' : 'ready', empty ? 'The source returned no trading pairs for this address.' : 'Market snapshot ready. All metrics refer to the selected trading pair.');
+    const marketGap = market.reason === 'timeout' ? 'The market data source took too long to respond. Please try again.' : 'The market data source is temporarily unavailable. Please try again.';
+    document.getElementById('pair-summary').textContent = unavailable ? marketGap : empty ? 'No market pair is available for this address.' : primary ? `${market.pairs.length} pair${market.pairs.length === 1 ? '' : 's'} found · selected ${primary.dex_id || 'DEX'} pair by highest known liquidity.` : 'No base-token pair available. Source pairs are quote-token pairs, so summary metrics are unavailable.';
+    if (unavailable) setReportState('partial', 'Market data is unavailable. You can still inspect the other report sections.');
+    else if (empty) setReportState('no_data', 'The source returned no trading pairs for this address.');
+    else setReportState('ready', 'Report ready. Coverage varies by section.');
     const secStateEl = document.getElementById('security-source-state');
     const secLedEl = document.getElementById('security-source-led');
     const secStatus = result?.security_data?.overall_status;

@@ -54,8 +54,9 @@ class MarketPair(MarketMetrics):
 class TokenMarketData(MarketMetrics):
     source: Literal["dexscreener"] = "dexscreener"
     source_url: str
-    updated_at: datetime
-    status: Literal["ok", "no_data"]
+    updated_at: datetime | None
+    status: Literal["ok", "no_data", "unavailable"]
+    reason: Literal["timeout", "source_error"] | None = None
     primary_pair_address: str | None = None
     pairs: list[MarketPair]
 

@@ -82,6 +82,37 @@ def test_token_report_fetches_pairs_and_records_source(
     assert request.extensions["timeout"]["read"] == 10.0
 
 
+def test_report_can_return_onchain_data_when_market_times_out(
+    api_client: TestClient, http_handler: Mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.onchain_data import get_solscan_client
+
+    http_handler.side_effect = httpx.ReadTimeout("timeout")
+    solscan = Mock()
+    solscan.fetch_token_onchain.return_value = {
+        "address": ADDRESS,
+        "status": "ok",
+        "meta_source_url": "https://pro-api.solscan.io/v2.0/token/meta",
+        "holders_source_url": "https://pro-api.solscan.io/v2.0/token/holders",
+        "updated_at": "2026-11-17T10:00:00Z",
+        "metadata": {"address": ADDRESS},
+        "supply": {"ui_amount": 4200},
+        "holder_sample": {"sample_description": "Solscan fixture"},
+        "sample_description": "Solscan fixture",
+    }
+    monkeypatch.setitem(app.dependency_overrides, get_solscan_client, lambda: solscan)
+
+    response = api_client.post("/analyses/token?allow_partial=true", json={"address": ADDRESS})
+
+    assert response.status_code == 201
+    report = response.json()
+    assert report["market_data"]["status"] == "unavailable"
+    assert report["market_data"]["reason"] == "timeout"
+    assert report["market_data"]["updated_at"] is None
+    assert report["onchain_data"]["supply"]["ui_amount"] == 4200
+    solscan.fetch_token_onchain.assert_called_once_with(ADDRESS)
+
+
 @pytest.mark.parametrize("payload", [[], None])
 def test_empty_response_has_no_metrics(
     payload: object, api_client: TestClient, http_handler: Mock

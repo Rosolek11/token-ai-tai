@@ -3,6 +3,10 @@
   const dictionary = root.TokenTranslations || (typeof require === 'function' ? require('./translations.js') : {});
   const normalize = text => text.trim().replace(/\s+/g, ' ');
   const patterns = [
+    [/^(\S+) sampled · (.+) Only the first page was checked\.(.*)$/, (_, count, total, rest) => `W próbce: ${count} · ${part(total)} Sprawdzono tylko pierwszą stronę.${rest ? ' '+part(rest.trim()) : ''}`],
+    [/^(\S+) reported holders\.$/, (_, count) => `Liczba posiadaczy według dostawcy: ${count}.`],
+    [/^Holders included in Top 10: (\d+)\.$/, (_, count) => `Liczba posiadaczy uwzględnionych w Top 10: ${count}.`],
+    [/^(Share of total token supply\.|Uses percentages reported by Solscan\.) (Holders included in Top 10: \d+\.)$/, (_, basis, scope) => `${part(basis)} ${part(scope)}`],
     [/^Solscan Pro API access failed \((.*)\); holder pagination was skipped\.$/, (_, reason) => `Dostęp do Solscan Pro API nie powiódł się (${part(reason)}); pominięto pobieranie stron posiadaczy.`],
     [/^Top (\d+) holders from Solscan Pro API sample \((.*)\) control (.*)% of (.*)\.$/, (_, n, sample, pct, basis) => `${n} największych posiadaczy z próbki Solscan Pro API (${sample}) kontroluje ${pct}% ${part(basis)}.`],
     [/^No holders returned in Solscan Pro API sample \((.*)\); top 10 share is unavailable\.$/, (_, sample) => `Próbka Solscan Pro API nie zawiera posiadaczy (${sample}); udział 10 największych jest niedostępny.`],

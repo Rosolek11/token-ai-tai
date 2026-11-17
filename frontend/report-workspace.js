@@ -25,7 +25,49 @@
       explanation: level === 'unknown' ? 'Insufficient audit evidence. Missing data is not evidence of safety.' :
         (security.risk_summary?.verdict_summary || 'Provider-reported risk classification. Review individual observations and coverage below.')};
   }
-  if (typeof module !== 'undefined') module.exports = {warningModel,flagValue};
+  function nonNegative(value, max = Infinity) {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 && number <= max ? number : null;
+  }
+  const sourceNames = {rugcheck:'RugCheck', dexscreener:'DEX Screener', dextools:'DEXTools', gmgn:'GMGN', solscan:'Solscan'};
+  function holderModel(result) {
+    const chain = result?.onchain_data;
+    const security = result?.security_data;
+    const distribution = security?.holder_distribution;
+    const sample = chain?.holder_sample;
+    const rows = Array.isArray(chain?.holders) ? chain.holders : [];
+    const measurement = (value, source) => ({value, source: value === null ? null : source});
+    const fallbackSource = key => sourceNames[security?.normalized_data?.holders?.[key]?.sourceId] || 'Security aggregation';
+    const authority = kind => {
+      const active = security?.authorities?.[kind + '_authority_active'];
+      if (typeof active === 'boolean') return measurement(active, 'Security aggregation');
+      const address = chain?.metadata?.[kind + '_authority'];
+      // Solscan also serializes missing fields as null.
+      if (typeof address === 'string' && address.trim()) return measurement(true, 'Solscan');
+      return measurement(null);
+    };
+    const chainTotal = nonNegative(chain?.supply?.ui_amount) ?? nonNegative(chain?.total_supply);
+    const chainCount = nonNegative(chain?.holder_count) ?? nonNegative(sample?.total_holders);
+    const chainShare = nonNegative(sample?.top_10_share_percent, 100) ?? nonNegative(chain?.top_10_share_percent, 100);
+    const decimals = nonNegative(chain?.supply?.decimals) ?? nonNegative(chain?.decimals);
+    return {
+      supply: chainTotal !== null ? measurement(chainTotal, 'Solscan') : measurement(nonNegative(security?.market_activity?.total_supply), 'Security aggregation'),
+      count: chainCount !== null ? measurement(chainCount, 'Solscan') : measurement(nonNegative(distribution?.holder_count), fallbackSource('holder_count')),
+      top10: chainShare !== null ? measurement(chainShare, 'Solscan holder sample') : measurement(nonNegative(distribution?.top_10_holders_pct, 100), fallbackSource('top_10_holders_pct')),
+      mint: authority('mint'),
+      freeze: authority('freeze'),
+      decimals: decimals !== null ? measurement(decimals, 'Solscan') : measurement(nonNegative(security?.market_activity?.token_decimals), 'Security aggregation'),
+      sampleSize: nonNegative(sample?.sample_size) ?? (rows.length || null),
+      rankedCount: nonNegative(sample?.top_10_count, 10),
+      totalHolders: nonNegative(sample?.total_holders) ?? chainCount,
+      sampleBasis: sample?.calculation_basis,
+      sampleDescription: chain?.sample_description || sample?.sample_description,
+      rows: rows.slice(0, 10),
+      fallbackRows: Array.isArray(distribution?.top_holders) && distribution.top_holders.length > 0,
+    };
+  }
+  if (typeof module !== 'undefined') module.exports = {warningModel,flagValue,holderModel};
   if (!root.document) return;
   const doc = root.document;
   const content = doc.getElementById('report-content');
@@ -64,13 +106,44 @@
   if (grids[0]) panes.audit.append(grids[0]);
   panes.audit.append(create('p','coverage-note','Scores are provider observations, not an AI assessment. A high safety score does not certify a token as safe. Missing checks remain unknown.'));
   if (grids[1]) panes.contract.append(grids[1]);
-  if (grids[2]) panes.holders.append(grids[2]);
-  const holdersList = doc.getElementById('top-holders-list'); if (holdersList) panes.holders.append(holdersList);
+  const holderFacts = create('dl','holder-facts');
+  const onchainNote = create('p','coverage-note holder-method');
+  const holderListTitle = create('h3','holder-list-title','Ranked holder sample');
+  const sampleTable = create('table','holder-sample');
+  const sampleHead = create('thead');
+  const sampleHeaders = create('tr');
+  for (const label of ['Owner or token account','Token balance','Share']) {
+    const heading = create('th',null,label);
+    heading.scope = 'col';
+    sampleHeaders.append(heading);
+  }
+  sampleHead.append(sampleHeaders);
+  const sampleList = create('tbody');
+  sampleTable.append(sampleHead,sampleList);
+  const holdersList = doc.getElementById('top-holders-list');
+  panes.holders.append(holderFacts,onchainNote,holderListTitle,sampleTable);
+  if (holdersList) panes.holders.append(holdersList);
+  if (grids[2]) {
+    ['holder_count','top_10_holders_pct'].forEach(key => {
+      const row = grids[2].querySelector(`[data-security-value="${key}"]`)?.parentElement;
+      if (row) row.hidden = true;
+    });
+    panes.holders.append(grids[2]);
+  }
   if (grids[3]) {
     const activity = create('dl','market-metrics security-metrics-grid');
-    [...grids[3].children].slice(5).forEach(el => activity.append(el));
+    for (const key of ['short_term_volume','short_term_price_change','txns_buys_sells_24h','txns_short_term','pair_age_boosts']) {
+      const row = grids[3].querySelector(`[data-security-value="${key}"]`)?.parentElement;
+      if (row) activity.append(row);
+    }
+    const supply = grids[3].querySelector('[data-security-value="supply_decimals"]')?.parentElement;
+    if (supply) supply.hidden = true;
+    const verification = grids[3].querySelector('[data-security-value="verification_status"]')?.parentElement;
+    if (verification && grids[1]) grids[1].append(verification);
     panes.liquidity.append(grids[3]); panes.activity.append(activity);
   }
+  const reportSources = create('ul','source-notes report-source-notes');
+  panes.sources.append(reportSources);
   const badges = doc.getElementById('security-source-badges'); if (badges) panes.sources.append(badges);
   const sourceNotes = create('ul','source-notes'); panes.sources.append(sourceNotes);
   const context = doc.querySelector('.report-context'); if (context) panes.sources.append(context);
@@ -131,7 +204,8 @@
   function sourceLink(source) {
     const address = encodeURIComponent(root.location.pathname.split('/')[2] || '');
     return {rugcheck:'https://rugcheck.xyz/tokens/'+address,dexscreener:'https://dexscreener.com/solana/'+address,
-      dextools:'https://www.dextools.io/',gmgn:'https://gmgn.ai/sol/token/'+address}[source];
+      dextools:'https://www.dextools.io/',gmgn:'https://gmgn.ai/sol/token/'+address,
+      solscan:'https://solscan.io/token/'+address}[source];
   }
   function observation(item) {
     const li = create('li','security-flag-item'); li.dataset.severity = item.severity;
@@ -153,29 +227,114 @@
     count.textContent = pending ? 'Waiting for provider responses' : `${items.length} observations · ${model.flags.length} provider flags · ${model.missing.length} data gaps`;
     list.replaceChildren(...(pending ? [] : items.map(observation)));
     if (!pending && !items.length) list.append(observation({severity:'info',title:'No matching observations',description:'No flags match this view. This is not a safety certification.',source:'aggregated'}));
-    sourceNotes.replaceChildren(...providers.map(name => observation({severity:model.sources[name]?.status === 'ok' ? 'info':'warn',source:name,title:name.toUpperCase()+' / '+(model.sources[name]?.status || 'unavailable'),description:pending ? 'Waiting for response.' : (model.sources[name]?.reason || 'Provider status, not a safety verdict.')+' · Retrieved: '+(root.TokenAI?.formatUpdatedAt(model.sources[name]?.updated_at) || 'No data')})));
+    sourceNotes.replaceChildren(...providers.map(name => sourceRow(name, model.sources[name], 'Security checks')));
   }
-  const onchainNote = create('p','coverage-note'); panes.holders.prepend(onchainNote);
-  const onchainGrid = create('dl','market-metrics security-metrics-grid'); panes.holders.append(onchainGrid);
+  function sourceRow(name, data, purpose) {
+    const status = data?.status || 'unavailable';
+    const notes = [];
+    if (purpose) notes.push(purpose);
+    if (pending) notes.push('Waiting for response.');
+    else {
+      if (data?.reason) notes.push(data.reason);
+      if (data?.updated_at && ['ok','partial','no_data'].includes(status)) {
+        notes.push('Retrieved: '+root.TokenAI.formatUpdatedAt(data.updated_at));
+      }
+    }
+    return observation({
+      severity: status === 'ok' ? 'info' : 'warn',
+      source: name,
+      title: sourceNames[name]+' / '+(pending ? 'Checking' : status),
+      description: notes.join(' · ') || 'Provider status',
+    });
+  }
+  const overview = create('div','report-overview');
+  const overviewSections = [['market','Market'],['warnings','Warnings'],['holders','Holders'],['sources','Sources']];
+  const overviewValues = overviewSections.map(([key,label]) => {
+    const button = create('button','report-overview-link');
+    button.type = 'button';
+    const value = create('strong');
+    const detail = create('small');
+    button.append(create('span',null,label),value,detail);
+    button.addEventListener('click',() => select(key,true));
+    overview.append(button);
+    return {value,detail};
+  });
+  panes.intelligence.append(overview);
+  const formatAmount = new Intl.NumberFormat('en-US',{maximumSignificantDigits: 12});
+  const formatShare = new Intl.NumberFormat('en-US',{maximumFractionDigits: 4});
+  function holderValue(value, suffix = '') {
+    if (value === null) return 'No data';
+    if (typeof value === 'boolean') return value ? 'Active' : 'Renounced';
+    return (suffix === '%' ? formatShare : formatAmount).format(value) + suffix;
+  }
+  function renderHolders(holders) {
+    holderFacts.replaceChildren(...[
+      ['Total supply',holders.supply,''],
+      ['Reported holder count',holders.count,''],
+      ['Top 10 concentration',holders.top10,'%'],
+      ['Mint authority',holders.mint,''],
+      ['Freeze authority',holders.freeze,''],
+      ['Token decimals',holders.decimals,''],
+    ].map(([label,reading,suffix]) => {
+      const item = create('div','holder-fact');
+      item.append(create('dt',null,label),create('dd',null,holderValue(reading.value,suffix)));
+      if (reading.source) item.append(create('small',null,reading.source));
+      return item;
+    }));
+    const mode = holders.sampleBasis === 'total_supply' ? 'Share of total token supply.' :
+      holders.sampleBasis === 'provider_percentage' ? 'Uses percentages reported by Solscan.' : '';
+    if (pending) onchainNote.textContent = 'Checking on-chain coverage…';
+    else if (holders.sampleSize > 0) {
+      const count = `${holderValue(holders.sampleSize)} sampled`;
+      const total = holders.totalHolders === null ? 'Total holder count unavailable.' : `${holderValue(holders.totalHolders)} reported holders.`;
+      onchainNote.textContent = [count+' · '+total, 'Only the first page was checked.', mode, holders.rankedCount > 0 && holders.rankedCount < 10 ? `Holders included in Top 10: ${holders.rankedCount}.` : ''].filter(Boolean).join(' ');
+    } else {
+      onchainNote.textContent = holders.sampleDescription || 'No Solscan holder sample available. Holder counts and concentration may still be available from security sources.';
+    }
+    holderListTitle.hidden = !holders.rows.length && !holders.fallbackRows;
+    holderListTitle.textContent = holders.rows.length ? 'Solscan holder sample' : 'Security provider holder breakdown';
+    sampleTable.hidden = !holders.rows.length;
+    sampleList.replaceChildren(...holders.rows.map(row => {
+      const item = create('tr');
+      const identity = create('td');
+      identity.append(create('code',null,row.owner || row.address || 'No data'));
+      const amount = create('td',null,holderValue(nonNegative(row.ui_amount)));
+      const share = create('td',null,holderValue(nonNegative(row.share_percent,100),'%'));
+      item.append(identity,amount,share);
+      return item;
+    }));
+    if (holdersList) holdersList.hidden = !!holders.rows.length || !holders.fallbackRows;
+  }
+  function renderOverview(result, holders) {
+    const market = result?.market_data;
+    const sourceStates = [market, result?.onchain_data, ...providers.filter(key => key !== 'dexscreener').map(key => model.sources[key])];
+    const responding = sourceStates.filter(source => ['ok','no_data','partial'].includes(source?.status)).length;
+    const readings = [
+      [root.TokenAI.formatUsd(market?.price_usd), market?.status === 'no_data' ? 'No trading pairs' : 'Price / USD'],
+      [model.level.toUpperCase(), 'Observed risk'],
+      [holderValue(holders.count.value), 'Reported holder count'],
+      [`${responding} / ${sourceStates.length}`, 'Report feeds responded'],
+    ];
+    overviewValues.forEach(({value,detail},index) => {
+      value.textContent = pending ? '—' : readings[index][0];
+      detail.textContent = readings[index][1];
+    });
+  }
   const activityNote = create('p','coverage-note'); panes.activity.prepend(activityNote);
   root.ReportWorkspace = {render(result, loading = false) {
     model = warningModel(result); pending = loading; draw();
     root.TokenLens?.render(result, loading);
-    const chain = result?.onchain_data;
-    onchainNote.textContent = loading ? 'Checking on-chain coverage…' : 'SOLSCAN / '+(chain?.status || 'unavailable').replace(/_/g,' ').toUpperCase()+
-      ' · '+(chain?.sample_description || chain?.reason || 'No on-chain holder sample available.').replace(/_/g,' ');
-    onchainGrid.replaceChildren(...[
-      ['Solscan total supply',chain?.total_supply],['Solscan holder count',chain?.holder_count],
-      ['Top 10 sample share',chain?.top_10_share_percent],
-    ].map(([label,value]) => {
-      const card = create('div','market-metric'); const amount = root.TokenAI.parseMarketNumber(value);
-      card.append(create('dt',null,label),create('dd',null,amount === null ? 'No data' : new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(amount)+(label.includes('share') ? '%' : '')),create('small',null,'SOLSCAN / '+(chain?.status || 'unavailable')));
-      return card;
-    }));
+    const holders = holderModel(result);
+    renderHolders(holders);
+    renderOverview(result,holders);
+    reportSources.replaceChildren(
+      sourceRow('dexscreener',result?.market_data,'Market snapshot'),
+      sourceRow('solscan',result?.onchain_data,'Supply and holder sample')
+    );
     const gmgn = result?.gmgn_activity;
     activityNote.textContent = loading ? 'Checking trading activity…' : 'GMGN / '+(gmgn?.status || 'unavailable').replace(/_/g,' ').toUpperCase()+
       ' · Sniper count: '+(root.TokenAI.parseMarketNumber(gmgn?.sniper_count) ?? 'No data');
-  }};
+  }, holderModel};
   select(root.location.hash.slice(1)); draw();
   root.addEventListener('hashchange',() => { const key = root.location.hash.slice(1); if (panes[key]) select(key); });
 })(typeof window === 'undefined' ? {} : window);
