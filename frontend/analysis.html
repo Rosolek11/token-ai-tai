@@ -49,10 +49,22 @@
             <span class="market-report__badge">READ ONLY</span>
           </div>
           <dl class="market-metrics">
-            <div class="market-metric"><dt>Price</dt><dd data-market-value="price_usd">No data</dd></div>
-            <div class="market-metric"><dt>Liquidity</dt><dd data-market-value="liquidity_usd">No data</dd></div>
-            <div class="market-metric"><dt>24h volume</dt><dd data-market-value="volume_24h_usd">No data</dd></div>
-            <div class="market-metric"><dt>24h price change</dt><dd data-market-value="price_change_24h_percent">No data</dd></div>
+            <div class="market-metric">
+              <dt>Price</dt><dd data-market-value="price_usd">No data</dd>
+              <p class="metric-attribution"><a data-source-for="price_usd" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable · Open DEX Screener ↗</a><time data-updated-for="price_usd">Fetched: No data</time></p>
+            </div>
+            <div class="market-metric">
+              <dt>Liquidity</dt><dd data-market-value="liquidity_usd">No data</dd>
+              <p class="metric-attribution"><a data-source-for="liquidity_usd" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable · Open DEX Screener ↗</a><time data-updated-for="liquidity_usd">Fetched: No data</time></p>
+            </div>
+            <div class="market-metric">
+              <dt>24h volume</dt><dd data-market-value="volume_24h_usd">No data</dd>
+              <p class="metric-attribution"><a data-source-for="volume_24h_usd" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable · Open DEX Screener ↗</a><time data-updated-for="volume_24h_usd">Fetched: No data</time></p>
+            </div>
+            <div class="market-metric">
+              <dt>24h price change</dt><dd data-market-value="price_change_24h_percent">No data</dd>
+              <p class="metric-attribution"><a data-source-for="price_change_24h_percent" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable · Open DEX Screener ↗</a><time data-updated-for="price_change_24h_percent">Fetched: No data</time></p>
+            </div>
           </dl>
           <section id="activity-report" class="activity-report" aria-labelledby="activity-report-title">
             <h3 id="activity-report-title">Transactions and volume</h3>
@@ -61,19 +73,22 @@
               <table class="activity-table">
                 <thead><tr><th scope="col">Window</th><th scope="col">Buys</th><th scope="col">Sells</th><th scope="col">Volume (USD)</th></tr></thead>
                 <tbody>
-                  <tr data-activity-window="m5" hidden><th scope="row">5 min</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
-                  <tr data-activity-window="h1" hidden><th scope="row">1 hour</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
-                  <tr data-activity-window="h6" hidden><th scope="row">6 hours</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
-                  <tr data-activity-window="h24" hidden><th scope="row">24 hours</th><td data-activity-value="buys"></td><td data-activity-value="sells"></td><td data-activity-value="volume"></td></tr>
+                  <tr data-activity-window="m5" hidden><th scope="row">5 min</th><td><span data-activity-value="buys"></span><small class="metric-attribution"><a data-source-for="txns.m5.buys" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.m5.buys">Fetched: No data</time></small></td><td><span data-activity-value="sells"></span><small class="metric-attribution"><a data-source-for="txns.m5.sells" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.m5.sells">Fetched: No data</time></small></td><td><span data-activity-value="volume"></span><small class="metric-attribution"><a data-source-for="volume.m5" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="volume.m5">Fetched: No data</time></small></td></tr>
+                  <tr data-activity-window="h1" hidden><th scope="row">1 hour</th><td><span data-activity-value="buys"></span><small class="metric-attribution"><a data-source-for="txns.h1.buys" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h1.buys">Fetched: No data</time></small></td><td><span data-activity-value="sells"></span><small class="metric-attribution"><a data-source-for="txns.h1.sells" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h1.sells">Fetched: No data</time></small></td><td><span data-activity-value="volume"></span><small class="metric-attribution"><a data-source-for="volume.h1" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="volume.h1">Fetched: No data</time></small></td></tr>
+                  <tr data-activity-window="h6" hidden><th scope="row">6 hours</th><td><span data-activity-value="buys"></span><small class="metric-attribution"><a data-source-for="txns.h6.buys" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h6.buys">Fetched: No data</time></small></td><td><span data-activity-value="sells"></span><small class="metric-attribution"><a data-source-for="txns.h6.sells" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h6.sells">Fetched: No data</time></small></td><td><span data-activity-value="volume"></span><small class="metric-attribution"><a data-source-for="volume.h6" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="volume.h6">Fetched: No data</time></small></td></tr>
+                  <tr data-activity-window="h24" hidden><th scope="row">24 hours</th><td><span data-activity-value="buys"></span><small class="metric-attribution"><a data-source-for="txns.h24.buys" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h24.buys">Fetched: No data</time></small></td><td><span data-activity-value="sells"></span><small class="metric-attribution"><a data-source-for="txns.h24.sells" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="txns.h24.sells">Fetched: No data</time></small></td><td><span data-activity-value="volume"></span><small class="metric-attribution"><a data-source-for="volume.h24" href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Source unavailable</a><time data-updated-for="volume.h24">Fetched: No data</time></small></td></tr>
                 </tbody>
               </table>
             </div>
-            <div class="activity-meta"><span>Data source</span><a data-activity-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Open DEX Screener source ↗</a></div>
           </section>
           <div class="market-report__meta">
             <p>Last updated <time data-market-value="updated_at">No data</time></p>
             <a data-market-source href="https://dexscreener.com/solana" target="_blank" rel="noopener noreferrer">Open DEX Screener source ↗</a>
           </div>
+        </section>
+        <section id="data-sources" class="data-sources" aria-labelledby="data-sources-title" hidden>
+          <h3 id="data-sources-title">Data Sources</h3>
+          <ul data-source-list></ul>
         </section>
         <p class="analysis-disclaimer">Reports are for research and do not constitute financial advice.</p>
         <a class="analysis-back" href="/">← Back to Token AI</a>

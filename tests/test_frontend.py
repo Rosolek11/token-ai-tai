@@ -36,7 +36,12 @@ def test_analysis_page_serves_address_form() -> None:
     assert 'data-activity-window="h1"' in response.text
     assert 'data-activity-window="h6"' in response.text
     assert 'data-activity-window="h24"' in response.text
-    assert 'data-activity-source' in response.text
+    assert 'id="data-sources"' in response.text
+    assert 'data-source-list' in response.text
+    assert 'data-source-for="price_usd"' in response.text
+    assert 'data-updated-for="price_usd"' in response.text
+    assert 'data-source-for="txns.m5.buys"' in response.text
+    assert 'data-updated-for="volume.h24"' in response.text
 
 
 def test_frontend_assets_are_available() -> None:
@@ -82,6 +87,20 @@ def test_activity_report_handles_partial_and_missing_data_without_defaulting_to_
     assert "formatCount(buys)" in response.text
     assert "formatCount(sells)" in response.text
     assert "formatUsd(volumeValue)" in response.text
+
+
+def test_market_metrics_show_per_field_source_and_fetch_time_with_unavailable_status() -> None:
+    response = client.get("/assets/analysis.js")
+    assert response.status_code == 200
+    assert "marketData.provenance?.[metricKey]" in response.text
+    assert "provenance.fetched_at" in response.text
+    assert "sourceLink.dataset.available" in response.text
+    assert "Source unavailable · Open DEX Screener" in response.text
+    assert "Fetched: ${formatUpdatedAt(provenance.fetchedAt)}" in response.text
+    assert "function updateDataSources(marketData, address, hasMetricData)" in response.text
+    assert "parseSourceUrl(source.url)" in response.text
+    assert "Available" in response.text
+    assert "Unavailable" in response.text
 
 
 def test_client_config_does_not_expose_secrets() -> None:

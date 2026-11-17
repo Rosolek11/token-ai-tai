@@ -41,15 +41,98 @@ function formatCount(value) {
   return new Intl.NumberFormat('en-US').format(count);
 }
 
-function getSourceUrl(marketData, address) {
-  const fallbackUrl = `https://dexscreener.com/solana/${encodeURIComponent(address)}`;
-  if (typeof marketData.source_url !== 'string') return fallbackUrl;
+function parseSourceUrl(value) {
+  if (typeof value !== 'string') return null;
   try {
-    const parsedUrl = new URL(marketData.source_url);
-    return parsedUrl.protocol === 'https:' ? parsedUrl.href : fallbackUrl;
+    const parsedUrl = new URL(value);
+    return parsedUrl.protocol === 'https:' ? parsedUrl.href : null;
   } catch {
-    return fallbackUrl;
+    return null;
   }
+}
+
+function getSourceUrl(marketData, address) {
+  return parseSourceUrl(marketData.source_url)
+    || `https://dexscreener.com/solana/${encodeURIComponent(address)}`;
+}
+
+function getMetricProvenance(marketData, metricKey, address) {
+  const provenance = marketData.provenance?.[metricKey] || {};
+  const reportedUrl = parseSourceUrl(provenance.source_url || marketData.source_url);
+  const sourceAvailable = provenance.available === false
+    ? false
+    : provenance.available === true || Boolean(reportedUrl);
+  return {
+    sourceUrl: reportedUrl || `https://dexscreener.com/solana/${encodeURIComponent(address)}`,
+    sourceAvailable,
+    sourceName: provenance.source_name || marketData.source_name || 'data source',
+    fetchedAt: provenance.fetched_at || provenance.updated_at || marketData.updated_at,
+  };
+}
+
+function updateMetricAttribution(container, marketData, metricKey, address) {
+  const provenance = getMetricProvenance(marketData, metricKey, address);
+  const sourceLink = container.querySelector(`[data-source-for="${metricKey}"]`);
+  const fetchedAt = container.querySelector(`[data-updated-for="${metricKey}"]`);
+  if (sourceLink) {
+    sourceLink.href = provenance.sourceUrl;
+    sourceLink.dataset.available = String(provenance.sourceAvailable);
+    sourceLink.textContent = provenance.sourceAvailable
+      ? `Open ${provenance.sourceName} ↗`
+      : 'Source unavailable · Open DEX Screener ↗';
+  }
+  if (fetchedAt) fetchedAt.textContent = `Fetched: ${formatUpdatedAt(provenance.fetchedAt)}`;
+}
+
+function updateDataSources(marketData, address, hasMetricData) {
+  const sourcesSection = document.getElementById('data-sources');
+  const sourceList = sourcesSection.querySelector('[data-source-list]');
+  const reportedSources = Array.isArray(marketData.sources) ? marketData.sources : [];
+  const metricKeys = [
+    'price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent',
+    ...['m5', 'h1', 'h6', 'h24'].flatMap((windowName) => [
+      `txns.${windowName}.buys`, `txns.${windowName}.sells`, `volume.${windowName}`,
+    ]),
+  ];
+  const metricSources = metricKeys
+    .map((metricKey) => marketData.provenance?.[metricKey])
+    .filter((source) => source?.source_url)
+    .map((source) => ({
+      name: source.source_name || 'Data source',
+      url: source.source_url,
+      available: source.available,
+      status: source.status,
+    }));
+  const sources = reportedSources.length > 0
+    ? reportedSources
+    : metricSources.length > 0
+      ? metricSources
+      : [{
+        name: marketData.source_name || 'DEX Screener',
+        url: marketData.source_url,
+        available: Boolean(marketData.source_url) && hasMetricData,
+      }];
+  const uniqueSources = [...new Map(sources.map((source) => [source.url || source.name, source])).values()];
+
+  sourceList.replaceChildren(...uniqueSources.map((source) => {
+    const item = document.createElement('li');
+    item.className = 'data-source';
+    const sourceUrl = parseSourceUrl(source.url) || getSourceUrl(marketData, address);
+    const explicitlyUnavailable = source.available === false || source.status === 'unavailable';
+    const explicitlyAvailable = source.available === true || source.status === 'available';
+    const isAvailable = explicitlyAvailable || (!explicitlyUnavailable && Boolean(parseSourceUrl(source.url)) && hasMetricData);
+    const link = document.createElement('a');
+    link.href = sourceUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `${source.name || 'Data source'} ↗`;
+    const status = document.createElement('span');
+    status.className = `data-source__status${isAvailable ? ' is-available' : ' is-unavailable'}`;
+    status.textContent = isAvailable ? 'Available' : 'Unavailable';
+    item.append(link, status);
+    return item;
+  }));
+  sourcesSection.hidden = false;
 }
 
 function updateActivityReport(marketData, address) {
@@ -81,24 +164,25 @@ function updateActivityReport(marketData, address) {
     row.querySelector('[data-activity-value="buys"]').textContent = formatCount(buys);
     row.querySelector('[data-activity-value="sells"]').textContent = formatCount(sells);
     row.querySelector('[data-activity-value="volume"]').textContent = formatUsd(volumeValue);
+    updateMetricAttribution(activityReport, marketData, `txns.${windowName}.buys`, address);
+    updateMetricAttribution(activityReport, marketData, `txns.${windowName}.sells`, address);
+    updateMetricAttribution(activityReport, marketData, `volume.${windowName}`, address);
   });
 
   activityTable.hidden = !hasActivityData;
   emptyMessage.hidden = hasActivityData;
-  const activitySource = activityReport.querySelector('[data-activity-source]');
-  const sourceUrl = getSourceUrl(marketData, address);
-  activitySource.href = sourceUrl;
-  activitySource.textContent = sourceUrl.includes('dexscreener.com') ? 'Open DEX Screener source ↗' : 'Open data source ↗';
 }
 
 function updateMarketReport(result, address, subjectType) {
   const report = document.getElementById('market-report');
   if (subjectType !== 'token') {
     report.hidden = true;
+    document.getElementById('data-sources').hidden = true;
     return;
   }
 
   const marketData = result.market_data || {};
+  const marketMetricKeys = ['price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent'];
   report.querySelector('[data-market-value="price_usd"]').textContent = formatUsd(marketData.price_usd);
   report.querySelector('[data-market-value="liquidity_usd"]').textContent = formatUsd(marketData.liquidity_usd);
   report.querySelector('[data-market-value="volume_24h_usd"]').textContent = formatUsd(marketData.volume_24h_usd);
@@ -108,8 +192,20 @@ function updateMarketReport(result, address, subjectType) {
   const sourceLink = report.querySelector('[data-market-source]');
   const sourceUrl = getSourceUrl(marketData, address);
   sourceLink.href = sourceUrl;
-  sourceLink.textContent = sourceUrl.includes('dexscreener.com') ? 'Open DEX Screener source ↗' : 'Open data source ↗';
+  sourceLink.textContent = parseSourceUrl(marketData.source_url)
+    ? 'Open data source ↗'
+    : 'Source unavailable · Open DEX Screener ↗';
+  marketMetricKeys.forEach((metricKey) => updateMetricAttribution(report, marketData, metricKey, address));
   updateActivityReport(marketData, address);
+  const hasMetricData = marketMetricKeys.some((metricKey) => {
+    const value = marketData[metricKey];
+    return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+  }) || ['m5', 'h1', 'h6', 'h24'].some((windowName) => {
+    const transactions = marketData.txns?.[windowName] || {};
+    const values = [transactions.buys, transactions.sells, marketData.volume?.[windowName]];
+    return values.some((value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
+  });
+  updateDataSources(marketData, address, hasMetricData);
   report.hidden = false;
 }
 
@@ -132,6 +228,8 @@ form.addEventListener('submit', async (event) => {
   }
 
   addressInput.removeAttribute('aria-invalid');
+  document.getElementById('market-report').hidden = true;
+  document.getElementById('data-sources').hidden = true;
   submitButton.disabled = true;
   submitButton.querySelector('span').textContent = 'Analyzing…';
   showMessage('Submitting address…', 'pending');
