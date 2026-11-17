@@ -1,4 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone
+from time import monotonic
 from typing import Annotated, Any, Iterator, Literal
 
 import httpx
@@ -274,11 +276,13 @@ class SecurityDataClient:
         rugcheck_api_key: str | None = None,
         dextools_api_key: str | None = None,
         gmgn_api_key: str | None = None,
+        provider_timeout: float = 10.0,
     ) -> None:
         self.client = client
         self.rugcheck_api_key = rugcheck_api_key
         self.dextools_api_key = dextools_api_key
         self.gmgn_api_key = gmgn_api_key
+        self.provider_timeout = provider_timeout
 
     def _get_json_read_only(
         self,
@@ -413,15 +417,77 @@ class SecurityDataClient:
 
         recorder = SourceRecorder()
 
-        # 1. RugCheck report (read-only GET)
         rugcheck_url = f"{self.RUGCHECK_BASE_URL}/{address}/report"
         rugcheck_headers: dict[str, str] = {}
         if self.rugcheck_api_key:
             rugcheck_headers["X-API-KEY"] = self.rugcheck_api_key
             rugcheck_headers["Authorization"] = f"Bearer {self.rugcheck_api_key}"
-        rc_status, rc_payload = self._get_json_read_only(
-            "rugcheck", rugcheck_url, rugcheck_headers
-        )
+
+        dexscreener_url = f"{self.DEXSCREENER_BASE_URL}/{address}"
+
+        dextools_url = f"{self.DEXTOOLS_BASE_URL}/{address}/audit"
+        dextools_headers: dict[str, str] = {}
+        if self.dextools_api_key:
+            dextools_headers["X-API-Key"] = self.dextools_api_key
+
+        gmgn_url = f"{self.GMGN_BASE_URL}/{address}"
+        gmgn_headers: dict[str, str] = {}
+        if self.gmgn_api_key:
+            gmgn_headers = {
+                "Authorization": f"Bearer {self.gmgn_api_key}",
+                "X-API-KEY": self.gmgn_api_key,
+            }
+
+        specs: list[tuple[SecuritySourceName, str, dict[str, str]]] = [
+            ("rugcheck", rugcheck_url, rugcheck_headers),
+            ("dexscreener", dexscreener_url, {}),
+            ("dextools", dextools_url, dextools_headers),
+        ]
+        if self.gmgn_api_key:
+            specs.append(("gmgn", gmgn_url, gmgn_headers))
+
+        fetched: dict[SecuritySourceName, tuple[SecuritySourceStatus, Any]] = {}
+        executor = ThreadPoolExecutor(max_workers=len(specs))
+        try:
+            deadline = monotonic() + self.provider_timeout
+            futures = {
+                src_name: (
+                    src_url,
+                    executor.submit(self._get_json_read_only, src_name, src_url, src_hdrs),
+                )
+                for src_name, src_url, src_hdrs in specs
+            }
+            for src_name, (src_url, future) in futures.items():
+                remaining = max(0.0, deadline - monotonic())
+                try:
+                    fetched[src_name] = future.result(timeout=remaining)
+                except FuturesTimeoutError:
+                    fetched[src_name] = (
+                        SecuritySourceStatus(
+                            source=src_name,
+                            status="unavailable",
+                            reason="timeout",
+                            source_url=src_url,
+                            updated_at=now,
+                        ),
+                        None,
+                    )
+                except Exception:
+                    fetched[src_name] = (
+                        SecuritySourceStatus(
+                            source=src_name,
+                            status="unavailable",
+                            reason="http_error",
+                            source_url=src_url,
+                            updated_at=now,
+                        ),
+                        None,
+                    )
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
+        # 1. RugCheck report (read-only GET)
+        rc_status, rc_payload = fetched["rugcheck"]
         if rc_status.status == "ok":
             if not isinstance(rc_payload, dict) or not rc_payload:
                 rc_status = rc_status.model_copy(
@@ -455,8 +521,7 @@ class SecurityDataClient:
                          holders=holders, flags=flags)
 
         # 2. DexScreener pair & security telemetry (read-only GET)
-        dexscreener_url = f"{self.DEXSCREENER_BASE_URL}/{address}"
-        ds_status, ds_payload = self._get_json_read_only("dexscreener", dexscreener_url)
+        ds_status, ds_payload = fetched["dexscreener"]
         if ds_status.status == "ok":
             if ds_payload is None or ds_payload == []:
                 ds_status = ds_status.model_copy(
@@ -513,13 +578,7 @@ class SecurityDataClient:
                          holders=holders, flags=flags)
 
         # 3. DexTools audit report (read-only GET, official API only, no scraping)
-        dextools_url = f"{self.DEXTOOLS_BASE_URL}/{address}/audit"
-        dextools_headers: dict[str, str] = {}
-        if self.dextools_api_key:
-            dextools_headers["X-API-Key"] = self.dextools_api_key
-        dt_status, dt_payload = self._get_json_read_only(
-            "dextools", dextools_url, dextools_headers
-        )
+        dt_status, dt_payload = fetched["dextools"]
         if dt_status.status == "ok":
             if not isinstance(dt_payload, dict):
                 dt_status = dt_status.model_copy(
@@ -553,7 +612,6 @@ class SecurityDataClient:
                          holders=holders, flags=flags)
 
         # 4. GMGN Agent API read-only security info (only if account has access, no scraping, no trading)
-        gmgn_url = f"{self.GMGN_BASE_URL}/{address}"
         if not self.gmgn_api_key:
             sources["gmgn"] = SecuritySourceStatus(
                 source="gmgn",
@@ -563,13 +621,7 @@ class SecurityDataClient:
                 updated_at=now,
             )
         else:
-            gmgn_headers = {
-                "Authorization": f"Bearer {self.gmgn_api_key}",
-                "X-API-KEY": self.gmgn_api_key,
-            }
-            gmgn_status, gmgn_payload = self._get_json_read_only(
-                "gmgn", gmgn_url, gmgn_headers
-            )
+            gmgn_status, gmgn_payload = fetched["gmgn"]
             if gmgn_status.status == "ok":
                 if not isinstance(gmgn_payload, dict):
                     gmgn_status = gmgn_status.model_copy(
@@ -1646,6 +1698,43 @@ class SecurityDataClient:
                     f"Unavailable sources ({', '.join(unavail_sources)}) are marked explicitly and not treated as safe."
                 )
             risk_summary.verdict_summary = " ".join(parts)
+
+    def apply_market_data_fallback(
+        self,
+        security_data: TokenSecurityData,
+        market_data: TokenMarketData,
+    ) -> TokenSecurityData:
+        ds_current = security_data.sources.get("dexscreener")
+        if ds_current is not None and ds_current.status == "ok":
+            return security_data
+        if market_data.status not in ("ok", "no_data"):
+            return security_data
+
+        now = market_data.updated_at or datetime.now(timezone.utc)
+        self._apply_market_data_fallback(
+            market_data,
+            activity=security_data.market_activity,
+            liquidity=security_data.liquidity_security,
+            flags=security_data.flags,
+        )
+        security_data.sources["dexscreener"] = SecuritySourceStatus(
+            source="dexscreener",
+            status=market_data.status,
+            reason=None if market_data.status == "ok" else "not_found",
+            http_status=200,
+            source_url=market_data.source_url,
+            updated_at=now,
+        )
+        statuses = [s.status for s in security_data.sources.values()]
+        if all(s == "ok" for s in statuses):
+            security_data.overall_status = "ok"
+        elif any(s == "ok" for s in statuses):
+            security_data.overall_status = "partial"
+        elif any(s == "no_data" for s in statuses):
+            security_data.overall_status = "no_data"
+        else:
+            security_data.overall_status = "unavailable"
+        return security_data
 
 
 def get_security_client(request: Request) -> Iterator[SecurityDataClient]:

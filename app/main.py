@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -30,6 +31,11 @@ from app.security_data import (
     SecurityDataClient,
     TokenSecurityData,
     get_security_client,
+)
+from app.source_data import (
+    DEFAULT_PROVIDER_TIMEOUT,
+    SourceError,
+    combine_token_sources,
 )
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -84,10 +90,15 @@ class AnalysisResponse(BaseModel):
 
 
 class TokenReportResponse(AnalysisResponse):
+    status: Literal["ok", "partial", "no_data", "unavailable"] = "ok"
+    partial: bool = False
     market_data: TokenMarketData
     gmgn_activity: GmgnActivity
     security_data: TokenSecurityData | None = None
     onchain_data: TokenOnChainData | None = None
+    sources_status: dict[str, str] = Field(default_factory=dict)
+    source_errors: list[SourceError] = Field(default_factory=list)
+    errors: list[SourceError] = Field(default_factory=list)
 
 
 @app.exception_handler(RequestValidationError)
@@ -148,28 +159,29 @@ def analyse_token(
     security_provider: SecurityDataClient = Depends(get_security_client),
     solscan: SolscanClient = Depends(get_solscan_client),
     allow_partial: bool = False,
+    provider_timeout: float | None = None,
 ) -> TokenReportResponse:
+    effective_timeout = (
+        provider_timeout
+        if provider_timeout is not None
+        else getattr(app.state.settings, "provider_timeout_seconds", DEFAULT_PROVIDER_TIMEOUT)
+    )
     try:
-        market_data = provider.fetch_token_market(payload.address)
+        combined = combine_token_sources(
+            payload.address,
+            market_provider=provider,
+            gmgn_provider=gmgn,
+            security_provider=security_provider,
+            solscan_provider=solscan,
+            provider_timeout=effective_timeout,
+            allow_partial=allow_partial,
+        )
     except MarketDataError as error:
         timed_out = isinstance(error, MarketDataTimeout)
-        if not allow_partial:
-            raise HTTPException(
-                status_code=504 if timed_out else 502,
-                detail="MARKET_DATA_TIMEOUT" if timed_out else "MARKET_DATA_UNAVAILABLE",
-            ) from error
-        market_data = TokenMarketData(
-            source_url=f"{DexScreenerClient.BASE_URL}/{payload.address}",
-            status="unavailable",
-            reason="timeout" if timed_out else "source_error",
-            updated_at=None,
-            pairs=[],
-        )
-
-    security_data = security_provider.fetch_token_security(
-        payload.address, market_data=market_data
-    )
-    onchain_data = solscan.fetch_token_onchain(payload.address)
+        raise HTTPException(
+            status_code=504 if timed_out else 502,
+            detail="MARKET_DATA_TIMEOUT" if timed_out else "MARKET_DATA_UNAVAILABLE",
+        ) from error
 
     return TokenReportResponse(
         id=str(uuid4()),
@@ -177,10 +189,15 @@ def analyse_token(
         address=payload.address,
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
-        market_data=market_data,
-        gmgn_activity=gmgn.fetch_activity(payload.address),
-        security_data=security_data,
-        onchain_data=onchain_data,
+        status=combined.status,
+        partial=combined.partial,
+        market_data=combined.market_data,
+        gmgn_activity=combined.gmgn_activity,
+        security_data=combined.security_data,
+        onchain_data=combined.onchain_data,
+        sources_status=combined.sources_status,
+        source_errors=combined.source_errors,
+        errors=combined.source_errors,
     )
 
 
