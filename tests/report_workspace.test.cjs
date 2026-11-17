@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {warningModel,flagValue} = require('../frontend/report-workspace.js');
+const {warningModel,flagValue,activityWindowRows,analysisFactLinks} = require('../frontend/report-workspace.js');
 const sources = Object.fromEntries(['rugcheck','dexscreener','dextools','gmgn'].map(key => [key,{status:'ok'}]));
 test('warning titles omit raw account payloads but retain meaningful scalar values',()=>{
   assert.equal(flagValue('x'.repeat(1000)), '');
@@ -39,4 +39,15 @@ test('a refresh failure clears previous flags and verdict', () => {
 test('no-data sources count as missing evidence even with no flags', () => {
   const model = warningModel({security_data:{sources:{rugcheck:{status:'no_data'}},flags:[]}});
   assert.equal(model.complete,false); assert.equal(model.level,'unknown');
+});
+test('activity windows preserve real zeros and keep each missing field explicit', () => {
+  const rows = activityWindowRows({buys_5m:0,sells_5m:null,volume_5m_usd:0,buys_24h:8}, value => `$${value}`);
+  assert.deepEqual(rows[0],{window:'5m',buys:'0',sells:'No data',volume:'$0'});
+  assert.deepEqual(rows[3],{window:'24h',buys:'8',sells:'No data',volume:'No data'});
+});
+test('AI fact citations only include available values and verified HTTPS links', () => {
+  const facts = analysisFactLinks({price:{price_usd:{value:1,sourceId:'dexscreener',url:'https://example.test/fact',timestamp:'now'},price_native_sol:{value:null,sourceId:'dexscreener',url:'https://example.test'}},flags:{'gmgn:test':{value:true,sourceId:'gmgn',url:'javascript:alert(1)'}}});
+  assert.equal(facts.length,2);
+  assert.equal(facts[0].url,'https://example.test/fact');
+  assert.equal(facts[1].url,null);
 });

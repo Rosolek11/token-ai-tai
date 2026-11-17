@@ -79,6 +79,16 @@ window.TokenAI = (() => {
     }
     sourceLink.href = sourceUrl;
     sourceLink.textContent = 'Verify on DEX Screener ↗';
+    const marketSource = marketData.source || 'dexscreener';
+    report.querySelectorAll?.('.market-metric').forEach(card => {
+      const value = card.querySelector('dd');
+      if (!value) return;
+      let meta = card.querySelector('[data-metric-provenance]');
+      if (!meta && typeof document.createElement === 'function') {
+        meta = document.createElement('small'); meta.dataset.metricProvenance = 'true'; card.append(meta);
+      }
+      if (meta) meta.textContent = `${marketSource.toUpperCase()} · Retrieved ${formatUpdatedAt(marketData.updated_at)}`;
+    });
     updateSecurityReport(result, address);
   }
   function formatCompactNumber(value) {
@@ -205,14 +215,15 @@ window.TokenAI = (() => {
 
     const b24 = parseMarketNumber(act.buys_24h);
     const s24 = parseMarketNumber(act.sells_24h);
-    setVal('txns_buys_sells_24h', b24 === null && s24 === null ? 'No data' : `${b24 ?? 0} B / ${s24 ?? 0} S`);
-    setVal('buy_sell_ratio_24h', parseMarketNumber(act.buy_sell_ratio_24h) !== null ? `Buy/Sell ratio: ${act.buy_sell_ratio_24h}x (${act.total_txns_24h ?? 0} total)` : 'Order flow balance');
+    setVal('txns_buys_sells_24h', b24 === null && s24 === null ? 'No data' : `${b24 === null ? 'No data' : `${b24} buys`} / ${s24 === null ? 'No data' : `${s24} sells`}`);
+    const total24 = parseMarketNumber(act.total_txns_24h);
+    setVal('buy_sell_ratio_24h', parseMarketNumber(act.buy_sell_ratio_24h) !== null ? `Buy/Sell ratio: ${act.buy_sell_ratio_24h}x (${total24 === null ? 'No data' : `${total24} total`})` : 'Order flow balance');
 
     const b1h = parseMarketNumber(act.buys_1h);
     const s1h = parseMarketNumber(act.sells_1h);
     const b5m = parseMarketNumber(act.buys_5m);
     const s5m = parseMarketNumber(act.sells_5m);
-    setVal('txns_short_term', [b1h, s1h, b5m, s5m].every(v => v === null) ? 'No data' : `1h: ${b1h ?? 0}/${s1h ?? 0} · 5m: ${b5m ?? 0}/${s5m ?? 0}`);
+    setVal('txns_short_term', [b1h, s1h, b5m, s5m].every(v => v === null) ? 'No data' : `1h: ${b1h ?? 'No data'} buys / ${s1h ?? 'No data'} sells · 5m: ${b5m ?? 'No data'} buys / ${s5m ?? 'No data'} sells`);
 
     const age = parseMarketNumber(act.pair_age_hours);
     const boosts = parseMarketNumber(act.active_boosts);
@@ -230,6 +241,37 @@ window.TokenAI = (() => {
     const countEl = document.getElementById('security-flags-count');
     const flags = Array.isArray(sec.flags) ? sec.flags : [];
     if (countEl) countEl.textContent = String(flags.length);
+
+    const normalized = sec.normalized_data || {};
+    const sourceFields = {
+      price_usd: ['price','price_usd'], price_native_sol: ['price','price_native_sol'],
+      total_market_liquidity_usd: ['liquidity','total_market_liquidity_usd'],
+      lp_locked_pct: ['liquidity','lp_locked_pct'], lp_burned_pct: ['liquidity','lp_burned_pct'],
+      lp_locked_usd: ['liquidity','lp_locked_usd'], holder_count: ['holders','holder_count'],
+      top_holder_pct: ['holders','top_holder_pct'], top_5_holders_pct: ['holders','top_5_holders_pct'],
+      top_10_holders_pct: ['holders','top_10_holders_pct'], creator_balance_pct: ['holders','creator_balance_pct'],
+    };
+    secEl.querySelectorAll?.('[data-security-value]').forEach(node => {
+      const key = node.getAttribute('data-security-value');
+      const groupField = sourceFields[key];
+      const fact = groupField ? normalized[groupField[0]]?.[groupField[1]] : null;
+      const parent = node.closest?.('.market-metric');
+      if (!parent) return;
+      let meta = parent.querySelector('[data-security-provenance]');
+      if (!meta && typeof document.createElement === 'function') {
+        meta = document.createElement('small'); meta.dataset.securityProvenance = 'true'; parent.append(meta);
+      }
+      if (!meta) return;
+      const provider = fact?.sourceId || (sourceFields[key] ? 'Source unavailable' : 'Security aggregate');
+      const timestamp = fact?.timestamp || sec.updated_at;
+      meta.textContent = `${provider.toUpperCase()} · Retrieved ${formatUpdatedAt(timestamp)}`;
+      const oldLink = parent.querySelector('[data-provenance-link]');
+      if (oldLink && !fact?.url) oldLink.remove();
+      if (fact?.url) {
+        try { const url = new URL(fact.url); if (url.protocol === 'https:') { let link = parent.querySelector('[data-provenance-link]'); if (!link) { link = document.createElement('a'); link.dataset.provenanceLink = 'true'; link.target = '_blank'; link.rel = 'noopener noreferrer'; parent.append(link); } link.href = url.href; link.textContent = `Verify ${provider.toUpperCase()} ↗`; } }
+        catch { /* Invalid provider links are shown as unavailable. */ }
+      }
+    });
 
     const renderListItems = (listEl, items) => {
       if (!listEl) return;

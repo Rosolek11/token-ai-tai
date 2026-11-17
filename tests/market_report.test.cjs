@@ -10,6 +10,7 @@ function element() {
     hidden: false, disabled: false, textContent: '', value: '', className: '',
     dataset: {}, listeners: {}, attributes: {}, children: {},
     addEventListener(event, handler) { this.listeners[event] = handler; },
+    append(...nodes) { this.appended = [...(this.appended || []), ...nodes]; },
     setAttribute(name, value) { this.attributes[name] = value; },
     removeAttribute(name) { delete this.attributes[name]; },
     focus() { this.focused = true; },
@@ -106,6 +107,16 @@ test('report renders metrics, exact source and clears stale values on empty resp
   assert.equal(current.elements['market-report'].children['[data-market-source]'].href, source_url);
   current.common.updateMarketReport({ market_data: {} }, address);
   for (const metric of ['price_usd','liquidity_usd','volume_24h_usd','price_change_24h_percent','updated_at']) assert.equal(current.metric(metric), 'No data');
+});
+test('each market metric receives its source and fetch timestamp', () => {
+  const current = page();
+  const card = element(); card.children.dd = element();
+  card.querySelector = selector => card.children[selector] || (selector === '[data-metric-provenance]' ? card.appended?.find(node => node.dataset.metricProvenance) : undefined);
+  current.elements['market-report'].querySelectorAll = () => [card];
+  current.context.document.createElement = () => element();
+  current.common.updateMarketReport(data(), address);
+  const provenance = card.appended[0];
+  assert.match(provenance.textContent, /^DEXSCREENER · Retrieved /);
 });
 for (const source_url of ['javascript:alert(1)', 'http://example.test', 'malformed']) {
   test(`unsafe source falls back to DEX Screener: ${source_url}`, () => {

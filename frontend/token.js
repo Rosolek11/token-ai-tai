@@ -6,6 +6,7 @@ const retryButton = document.getElementById('retry-analysis');
 const copyButton = document.getElementById('copy-address');
 let reportAddress = '';
 let inFlight = false;
+let aiRequestId = 0;
 try { reportAddress = decodeURIComponent(window.location.pathname.split('/')[2] || ''); }
 catch { /* Invalid URL encoding is handled as an invalid address. */ }
 document.getElementById('report-address').textContent = reportAddress || 'Invalid address';
@@ -34,6 +35,7 @@ async function loadReport() {
     return;
   }
   inFlight = true;
+  const currentAiRequest = ++aiRequestId;
   window.ReportWorkspace?.render(null, true);
   setReportState('loading', 'Requesting current market data from DEX Screener.');
   try {
@@ -47,6 +49,11 @@ async function loadReport() {
     }
     TokenAI.updateMarketReport(result, reportAddress);
     window.ReportWorkspace?.render(result);
+    window.ReportWorkspace?.renderAI(result, null, true);
+    TokenAI.requestJson(`${base}/api/tokens/${encodeURIComponent(reportAddress)}/ai-analysis`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    }).then(aiResult => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, aiResult); })
+      .catch(() => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, { status: 'unavailable' }); });
     const empty = market.status === 'no_data' || market.pairs.length === 0;
     document.getElementById('empty-market').hidden = !empty;
     document.getElementById('partial-market').hidden = empty || ['price_usd', 'liquidity_usd', 'volume_24h_usd', 'price_change_24h_percent'].every(key => TokenAI.parseMarketNumber(market[key]) !== null);

@@ -25,7 +25,27 @@
       explanation: level === 'unknown' ? 'Insufficient audit evidence. Missing data is not evidence of safety.' :
         (security.risk_summary?.verdict_summary || 'Provider-reported risk classification. Review individual observations and coverage below.')};
   }
-  if (typeof module !== 'undefined') module.exports = {warningModel,flagValue};
+  function activityWindowRows(activity = {}, formatUsd = value => String(value)) {
+    const value = key => {
+      const amount = activity[key];
+      return typeof amount === 'number' && Number.isFinite(amount) ? String(amount) : 'No data';
+    };
+    return [
+      ['5m','buys_5m','sells_5m','volume_5m_usd'], ['1h','buys_1h','sells_1h','volume_1h_usd'],
+      ['6h','buys_6h','sells_6h','volume_6h_usd'], ['24h','buys_24h','sells_24h','volume_24h_usd'],
+    ].map(([window,buy,sell,volume]) => ({window,buys:value(buy),sells:value(sell),volume:activity[volume] === null || activity[volume] === undefined ? 'No data' : formatUsd(activity[volume])}));
+  }
+  function analysisFactLinks(normalized = {}) {
+    const facts = [];
+    for (const group of ['price','liquidity','holders','flags']) for (const [field,item] of Object.entries(normalized[group] || {})) {
+      if (item?.value === null || item?.value === undefined || !item.sourceId) continue;
+      let url = null;
+      try { const parsed = new URL(item.url); if (parsed.protocol === 'https:') url = parsed.href; } catch { /* No verified source link. */ }
+      facts.push({group,field,sourceId:item.sourceId,timestamp:item.timestamp,url});
+    }
+    return facts;
+  }
+  if (typeof module !== 'undefined') module.exports = {warningModel,flagValue,activityWindowRows,analysisFactLinks};
   if (!root.document) return;
   const doc = root.document;
   const content = doc.getElementById('report-content');
@@ -36,8 +56,8 @@
     if (text !== undefined) el.textContent = text;
     return el;
   };
-  const views = [ ['intelligence','Overview','00'], ['metrics','All signals','01'], ['market','Market','01'], ['warnings','Warnings','02'], ['contract','Contract','03'],
-    ['holders','Holders','04'], ['liquidity','Liquidity','05'], ['activity','Activity','06'], ['audit','Audit scores','07'], ['sources','Sources','08'], ['map','Bubble map','09'], ['local','Local engine','10'] ];
+  const views = [ ['intelligence','Overview','00'], ['metrics','All signals','01'], ['market','Market','01'], ['warnings','Warnings','02'], ['ai','AI summary','03'], ['contract','Contract','04'],
+    ['holders','Holders','05'], ['liquidity','Liquidity','06'], ['activity','Activity','07'], ['audit','Audit scores','08'], ['sources','Sources','09'], ['map','Bubble map','10'], ['local','Local engine','11'] ];
   views.forEach((view,index) => { view[2] = String(index+1).padStart(2,'0'); });
   const nav = create('div','workspace-nav'); nav.setAttribute('role','tablist'); nav.setAttribute('aria-label','Report screens');
   const panes = {};
@@ -158,6 +178,58 @@
   const onchainNote = create('p','coverage-note'); panes.holders.prepend(onchainNote);
   const onchainGrid = create('dl','market-metrics security-metrics-grid'); panes.holders.append(onchainGrid);
   const activityNote = create('p','coverage-note'); panes.activity.prepend(activityNote);
+  const activitySourceLinks = create('p','coverage-note'); panes.activity.append(activitySourceLinks);
+  const activityTable = create('div','activity-windows'); panes.activity.append(activityTable);
+  const aiPanel = create('section','ai-summary'); aiPanel.setAttribute('aria-live','polite');
+  const aiRating = create('p','ai-rating','Rating: No data'); aiRating.id = 'ai-rating';
+  const aiText = create('p','ai-summary-text','AI analysis is loading…'); aiText.id = 'ai-summary-text';
+  const aiReasons = create('ul','ai-reasons'); aiReasons.id = 'ai-reasons';
+  const aiCitations = create('ul','ai-citations'); aiCitations.id = 'ai-citations';
+  aiPanel.append(aiRating, aiText, create('h3',null,'Main reasons'), aiReasons, create('h3',null,'Referenced facts'), aiCitations,
+    create('p','coverage-note','Informational only. This is not investment advice.'));
+  panes.ai.append(aiPanel);
+  function renderActivity(result, loading) {
+    const activity = result?.security_data?.market_activity || {};
+    const sourceInfo = result?.security_data?.sources?.dexscreener || {};
+    const sourceTime = root.TokenAI?.formatUpdatedAt(sourceInfo.updated_at || result?.market_data?.updated_at) || 'No data';
+    activityNote.textContent = loading ? 'Checking trading activity…' : `DEX SCREENER · ${sourceInfo.status === 'ok' ? 'Available' : 'Source unavailable'} · Retrieved ${sourceTime}`;
+    const gmgn = result?.gmgn_activity || {};
+    activitySourceLinks.replaceChildren();
+    activitySourceLinks.append(create('span',null,`GMGN · ${(gmgn.status || 'unavailable').replace(/_/g,' ')} · Retrieved ${root.TokenAI?.formatUpdatedAt(gmgn.updated_at) || 'No data'} · Sniper count: ${root.TokenAI.parseMarketNumber(gmgn.sniper_count) ?? 'No data'} · `));
+    const tokenAddress = encodeURIComponent(root.location.pathname.split('/')[2] || '');
+    const dexLink = create('a',null,'Verify DEX Screener ↗'); dexLink.href = `https://dexscreener.com/solana/${tokenAddress}`; dexLink.target = '_blank'; dexLink.rel = 'noopener noreferrer';
+    const gmgnLink = create('a',null,'Verify GMGN ↗'); gmgnLink.href = `https://gmgn.ai/sol/token/${tokenAddress}`; gmgnLink.target = '_blank'; gmgnLink.rel = 'noopener noreferrer';
+    activitySourceLinks.append(dexLink,create('span',null,' · '),gmgnLink);
+    const rows = activityWindowRows(activity, value => root.TokenAI.formatUsd(value)).map(item => {
+      const row = create('div','activity-window');
+      row.append(create('strong',null,item.window),create('span',null,`${item.buys} buys`),create('span',null,`${item.sells} sells`),create('span',null,`${item.volume} volume`),create('small',null,`DEX SCREENER · Retrieved ${sourceTime}`));
+      return row;
+    });
+    activityTable.replaceChildren(...rows);
+  }
+  function safeSourceUrl(value) { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : null; } catch { return null; } }
+  function renderAI(result, response, loading) {
+    const securityData = result?.security_data || {};
+    const risk = securityData.risk_summary || {};
+    aiRating.textContent = `Provider rating: ${risk.risk_level ? String(risk.risk_level).toUpperCase() : 'No data'}${root.TokenAI?.parseMarketNumber(risk.safety_score) !== null && root.TokenAI?.parseMarketNumber(risk.safety_score) !== undefined ? ` · Safety score ${risk.safety_score}/100` : ''}`;
+    aiText.textContent = loading ? 'AI analysis is loading…' : typeof response?.analysis === 'string' && response.analysis.trim() ? response.analysis : (response?.status === 'no_data' ? 'No normalized facts are available for AI analysis.' : 'AI analysis is currently unavailable.');
+    const flags = Array.isArray(securityData.flags) ? securityData.flags : [];
+    aiReasons.replaceChildren(...flags.slice(0,5).map(flag => {
+      const li = create('li'); const a = create('a',null,`${String(flag.severity || 'info').toUpperCase()} · ${flag.title || 'Provider observation'}`);
+      a.href = '#warnings'; li.append(a); return li;
+    }));
+    if (!flags.length) aiReasons.append(create('li',null,'No provider reasons available. Missing checks are unknown, not evidence of safety.'));
+    const facts = analysisFactLinks(securityData.normalized_data || {});
+    const citations = facts.map(item => {
+      const li = create('li'); const url = safeSourceUrl(item.url);
+      const label = `${item.sourceId}.${item.group}.${item.field} · ${root.TokenAI?.formatUpdatedAt(item.timestamp) || 'No data'}`;
+      if (url) { const link = create('a',null,label); link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); }
+      else li.textContent = `${label} · Source unavailable`;
+      return li;
+    });
+    aiCitations.replaceChildren(...citations);
+    if (!citations.length) aiCitations.append(create('li',null,'No source-backed facts are available.'));
+  }
   root.ReportWorkspace = {render(result, loading = false) {
     model = warningModel(result); pending = loading; draw();
     root.TokenLens?.render(result, loading);
@@ -169,12 +241,13 @@
       ['Top 10 sample share',chain?.top_10_share_percent],
     ].map(([label,value]) => {
       const card = create('div','market-metric'); const amount = root.TokenAI.parseMarketNumber(value);
-      card.append(create('dt',null,label),create('dd',null,amount === null ? 'No data' : new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(amount)+(label.includes('share') ? '%' : '')),create('small',null,'SOLSCAN / '+(chain?.status || 'unavailable')));
+      card.append(create('dt',null,label),create('dd',null,amount === null ? 'No data' : new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(amount)+(label.includes('share') ? '%' : '')),create('small',null,'SOLSCAN / '+(chain?.status || 'unavailable')+' · Retrieved '+(root.TokenAI?.formatUpdatedAt(chain?.updated_at) || 'No data')));
       return card;
     }));
-    const gmgn = result?.gmgn_activity;
-    activityNote.textContent = loading ? 'Checking trading activity…' : 'GMGN / '+(gmgn?.status || 'unavailable').replace(/_/g,' ').toUpperCase()+
-      ' · Sniper count: '+(root.TokenAI.parseMarketNumber(gmgn?.sniper_count) ?? 'No data');
+    renderActivity(result, loading);
+    renderAI(result, result?.ai_analysis, loading);
+  }, renderAI(result, response, loading = false) {
+    renderAI(result, response, loading);
   }};
   select(root.location.hash.slice(1)); draw();
   root.addEventListener('hashchange',() => { const key = root.location.hash.slice(1); if (panes[key]) select(key); });
