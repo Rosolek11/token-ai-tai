@@ -37,6 +37,99 @@
 .workspace-ready .security-flag-item small{margin-top:5px;font-size:11px}
 .flag-source{margin-top:8px;font-size:8px}.source-notes{padding:0;list-style:none}
 .workspace-nav{scrollbar-width:thin;scrollbar-color:#296182 transparent}
+
+.report-state-badge[data-state=partial] {
+  color: #f1c888;
+  border-color: #f1c88855;
+}
+.report-overview,
+.holder-facts {
+  display: grid;
+  gap: 0 16px;
+  margin: 0 0 18px;
+}
+.report-overview { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.report-overview-link,
+.holder-fact {
+  min-width: 0;
+  padding: 12px 0;
+  border-top: 1px solid #416590;
+  color: #adbed4;
+}
+.report-overview-link {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  text-align: start;
+  background: transparent;
+  border-inline: 0;
+  border-bottom: 0;
+  cursor: pointer;
+}
+.report-overview-link:hover {
+  border-color: #86c3ff;
+  background: linear-gradient(180deg,#1e467333,transparent);
+}
+.report-overview-link:focus-visible {
+  outline: 2px solid #86c3ff;
+  outline-offset: 4px;
+}
+.report-overview-link span,
+.holder-fact dt {
+  color: #adc5e3;
+  font: 600 13px/1.4 var(--body);
+}
+.report-overview-link strong,
+.holder-fact dd {
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+  color: #e9f4ff;
+  font: 600 clamp(21px,2.75vw,38px)/1.12 "Chakra Petch",var(--display);
+  font-variant-numeric: tabular-nums;
+}
+.report-overview-link strong { font-size: clamp(18px,2.15vw,30px); }
+.report-overview-link small,
+.holder-fact small {
+  color: #9eb5d0;
+  font: 500 12px/1.45 var(--body);
+}
+.holder-facts { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.holder-method {
+  border-inline-start: 2px solid #5385bd;
+  padding-inline-start: 13px;
+}
+.holder-list-title {
+  margin: 24px 0 8px;
+  font: 600 18px/1.3 var(--body);
+}
+.holder-sample {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-bottom: 22px;
+}
+.holder-sample th,
+.holder-sample td {
+  padding: 10px 0 10px 8px;
+  border-bottom: 1px solid #283b53;
+  text-align: end;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.holder-sample :first-child:is(th,td) { text-align: start; width: 50%; padding-inline-start: 0; }
+.holder-sample th { color: #adc5e3; font: 600 12px/1.4 var(--body); }
+.holder-sample code { overflow-wrap: anywhere; color: #a8c7e8; }
+.holder-sample td:last-child { color: #d7edff; font-weight: 700; }
+@media (max-width: 930px) {
+  .report-overview { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+  .holder-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 480px) {
+  .holder-sample code { font-size: 11px; }
+}
 @media(min-width:761px){
   .workspace-ready #report-app>.site-header{height:70px;min-height:70px;padding-block:8px}
   .workspace-ready .brand-logo{width:46px;height:46px}

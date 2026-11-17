@@ -1,5 +1,6 @@
 /* Research lenses: every number retains its source and its original meaning. */
 (function(root) {
+  const holderModel = typeof module !== 'undefined' ? require('./report-workspace.js').holderModel : root.ReportWorkspace?.holderModel;
   function number(value, percent = false) {
     if (typeof value !== 'number' && typeof value !== 'string') return null;
     if (typeof value === 'string' && !value.trim()) return null;
@@ -8,22 +9,24 @@
   }
   function metrics(result) {
     const sec = result?.security_data || {}, h = sec.holder_distribution || {};
-    const a = sec.authorities || {}, l = sec.liquidity_security || {}, v = sec.verification_and_metadata || {};
-    const chain = result?.onchain_data || {};
+    const l = sec.liquidity_security || {}, v = sec.verification_and_metadata || {};
     const metric = (key,label,value,unit,detail,source = 'Security aggregation') => ({key,label,value,unit,detail,source});
     const pct = (key,label,value,detail) => metric(key,label,number(value,true),'%',detail);
     const bool = value => typeof value === 'boolean' ? value : null;
-    const top = number(h.top_10_holders_pct,true);
+    const holders = holderModel(result);
+    const {top10,count} = holders;
+    const mint = holders.mint.value;
+    const freeze = holders.freeze.value;
     return [
-      metric('top10','Top 10',top ?? number(chain.top_10_share_percent,true),'%',top !== null ? 'Share of supply held by the ten largest wallets.' : (chain.sample_description || 'Bounded holder sample; not necessarily global concentration.'),top !== null ? 'Security aggregation' : 'Solscan holder sample'),
+      metric('top10','Top 10',top10.value,'%',top10.source === 'Solscan holder sample' ? (holders.sampleDescription || 'Bounded holder sample; not necessarily global concentration.') : 'Provider-reported holder concentration.',top10.source || 'Holders'),
       pct('dev','Dev holdings',h.creator_balance_pct,'Creator-held supply, not all wallets controlled by the developer.'),
-      metric('holders','Holders',number(h.holder_count) ?? number(chain.holder_count),'', 'Provider-reported holder count; account and owner definitions may differ.',number(h.holder_count) !== null ? 'Security aggregation' : 'Solscan'),
+      metric('holders','Holders',count.value,'', 'Provider-reported holder count; account and owner definitions may differ.',count.source || 'Holders'),
       pct('snipers','Snipers',h.sniper_supply_pct,'Share of supply attributed to snipers. Not sniper wallet count.'),
       pct('insiders','Insiders',h.insider_supply_pct,'Provider-labelled insider supply; methods can differ from Axiom.'),
       pct('bundlers','Bundlers',h.bundled_supply_pct,'Provider-reported bundled supply. Not the Axiom bundle algorithm.'),
       metric('phishing','Phishing',null,'%', 'No documented phishing-wallet classifier is connected.','Not connected'),
       metric('pro','Pro traders',null,'','Requires a provider-defined professional-trader classification.','Not connected'),
-      metric('nomint','No mint',bool(a.mint_authority_active) === null ? null : !a.mint_authority_active,'bool','True means mint authority is disabled, not that the token is safe.'),
+      metric('nomint','No mint',mint === null ? null : !mint,'bool','True means mint authority is disabled, not that the token is safe.',holders.mint.source || undefined),
       metric('blacklist','No blacklist',bool(v.is_blacklisted) === null ? null : !v.is_blacklisted,'bool','A provider blacklist check, not proof of unrestricted transferability.'),
       metric('lp','Total LP',number(l.total_market_liquidity_usd),'USD','Total reported DEX liquidity across pools.'),
       pct('burned','LP burned',l.lp_burned_pct,'Burned liquidity-provider tokens. Different from locked liquidity.'),
@@ -33,14 +36,14 @@
       metric('sniper_count','Snipers / wallets',number(h.sniper_holders_count),'','Number of sniper wallets, separate from their held supply percentage.'),
       metric('fresh_buys','Fresh buys',null,'','Needs an agreed time window and fresh-wallet buy classification. Not the number of fresh holders.','Provider definition required'),
       metric('fresh_holding','Fresh holding',null,'%', 'Share of token supply held by fresh wallets. A fresh-wallet count ratio cannot substitute for this.','Provider definition required'),
-      metric('mint_auth','Mint Auth.',bool(a.mint_authority_active),'bool','Yes means an active mint authority; No means disabled or renounced.'),
-      metric('freeze_auth','Freeze Auth.',bool(a.freeze_authority_active),'bool','Yes means an active freeze authority; No means disabled or renounced.'),
+      metric('mint_auth','Mint Auth.',mint,'bool','Yes means an active mint authority; No means disabled or renounced.',holders.mint.source || undefined),
+      metric('freeze_auth','Freeze Auth.',freeze,'bool','Yes means an active freeze authority; No means disabled or renounced.',holders.freeze.source || undefined),
     ];
   }
   if (typeof module !== 'undefined') module.exports = {metrics,number};
   if (!root.document) return;
   const doc = root.document, deck = doc.getElementById('screen-intelligence'), map = doc.getElementById('screen-map');
-  if (!deck || !map) return;
+  if (!deck || !map || !holderModel) return;
   const el = (tag,cls,text) => {const n=doc.createElement(tag);if(cls)n.className=cls;if(text !== undefined)n.textContent=text;return n;};
   deck.querySelector('h2').textContent = 'Behind the token.';
   const intro = el('div','lens-masthead');

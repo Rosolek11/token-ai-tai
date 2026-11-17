@@ -540,6 +540,33 @@ Solscan Pro API key is not configured; on-chain metadata and holder sample were 
 Solscan Pro API returned an invalid metadata payload.|Solscan Pro API zwróciło niepoprawne metadane.
 total token supply|łącznej podaży tokena
 Solscan holder percentages|udziałów posiadaczy według Solscan
+PARTIAL REPORT|RAPORT CZĘŚCIOWY
+Market data unavailable|Dane rynkowe niedostępne
+Market data is unavailable. You can still inspect the other report sections.|Dane rynkowe są niedostępne. Nadal możesz przeglądać pozostałe sekcje raportu.
+Report ready. Coverage varies by section.|Raport gotowy. Zakres dostępnych danych zależy od sekcji.
+Provider-reported holder concentration.|Koncentracja posiadaczy według dostawcy.
+Total supply|Łączna podaż
+Reported holder count|Liczba posiadaczy według dostawcy
+Top 10 concentration|Koncentracja 10 największych posiadaczy
+Active|Aktywne
+Owner or token account|Właściciel lub konto tokena
+Token balance|Saldo tokena
+Token decimals|Miejsca dziesiętne tokena
+Share|Udział
+Total holder count unavailable.|Łączna liczba posiadaczy jest niedostępna.
+Only the first page was checked.|Sprawdzono tylko pierwszą stronę.
+Share of total token supply.|Udział w łącznej podaży tokena.
+Uses percentages reported by Solscan.|Według udziałów procentowych podanych przez Solscan.
+No Solscan holder sample available. Holder counts and concentration may still be available from security sources.|Próbka posiadaczy Solscan jest niedostępna. Liczbę i koncentrację posiadaczy mogą nadal podawać źródła bezpieczeństwa.
+Ranked holder sample|Ranking posiadaczy w próbce
+Security provider holder breakdown|Rozkład posiadaczy według źródeł bezpieczeństwa
+No trading pairs|Brak par handlowych
+Observed risk|Zaobserwowane ryzyko
+Report feeds responded|Źródła raportu, które odpowiedziały
+Supply and holder sample|Podaż i próbka posiadaczy
+Provider status|Status dostawcy
+Security checks|Kontrole bezpieczeństwa
+source_error|błąd dostawcy
 `;
   const dictionary = Object.fromEntries(entries.trim().split('\n').map(line => line.split('|')));
   root.TokenTranslations = dictionary;
