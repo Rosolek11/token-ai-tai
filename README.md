@@ -182,3 +182,25 @@ Dostep konkretnego konta wymaga klucza i odpowiedniego planu GMGN;
 testy 200/401/429 korzystaja z MockTransport, bez prawdziwych sekretow.
 `tests/test_trading_activity.py` sprawdza tez raport dla Wrapped SOL,
 brak danych, zera, brak klucza i timeout opcjonalnego dostawcy.
+
+## Wspólny schemat źródeł (TAI-16)
+
+Raporty `POST /analyses/token` (`security_data.normalized_data`) oraz
+`GET /api/tokens/{address}/security` (`normalized_data`) udostępniają grupy
+`price`, `liquidity`, `holders` i `flags`. Każdy wpis ma ten sam format:
+`{value, unit, sourceId, url, timestamp}`. Jednostki to `USD`, `SOL`, `percent`
+(0–100), `count`, `token`, `address`, `records` i `signal`.
+`records` przechowuje listę holderów lub pul, a `signal` wartość flagi
+opisaną kodem w kluczu `sourceId:code`.
+
+Brak wartości i brak listy rekordów oznacza `value: null`; zero i `false`
+są zachowywane. Nieznane pochodzenie ma metadane `null`. Brak flag oznacza
+pusty słownik, nie potwierdzenie bezpieczeństwa. Statusy błędów i dostępności
+pozostają w `sources`. Timestamp oznacza czas odczytu UTC. Przy zmianie wybranej
+wartości aktualizuje się jej pochodzenie; identyczna wartość zachowuje pierwsze
+źródło, które ją dostarczyło. Schemat jest także w `ai_context_payload`.
+Dotychczasowe pola raportu pozostają dostępne dla interfejsu.
+
+Przykładowy adres: `So11111111111111111111111111111111111111112` (Wrapped SOL).
+`tests/test_source_data.py` sprawdza mapowanie zapisanych fixture czterech
+źródeł, jednostki, URL i czas, a także brak danych, zero i `false`, bez sieci.

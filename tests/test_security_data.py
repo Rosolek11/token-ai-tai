@@ -108,6 +108,8 @@ def test_security_report_aggregates_all_four_sources_and_normalizes_flags(
 
     assert response.status_code == 201
     assert direct_response.status_code == 200
+    assert response.json()["security_data"]["normalized_data"]["price"]["price_usd"]["unit"] == "USD"
+    assert direct_response.json()["normalized_data"]["holders"]["holder_count"]["value"] == 485210
     security = response.json()["security_data"]
     assert security["address"] == ADDRESS
     assert security["read_only"] is True

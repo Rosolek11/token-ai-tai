@@ -5,6 +5,7 @@ import httpx
 from fastapi import Request
 from pydantic import BaseModel, BeforeValidator, Field
 
+from app.source_data import NormalizedSourceData, SourceRecorder
 from app.config import Settings
 from app.market_data import (
     OptionalAmount,
@@ -243,6 +244,7 @@ class TokenVerificationMetadata(BaseModel):
 
 
 class TokenSecurityData(BaseModel):
+    normalized_data: NormalizedSourceData = Field(default_factory=NormalizedSourceData)
     address: str
     overall_status: Literal["ok", "partial", "no_data", "unavailable"]
     read_only: Literal[True] = True
@@ -409,6 +411,8 @@ class SecurityDataClient:
         flags: list[NormalizedSecurityFlag] = []
         sources: dict[SecuritySourceName, SecuritySourceStatus] = {}
 
+        recorder = SourceRecorder()
+
         # 1. RugCheck report (read-only GET)
         rugcheck_url = f"{self.RUGCHECK_BASE_URL}/{address}/report"
         rugcheck_headers: dict[str, str] = {}
@@ -447,6 +451,8 @@ class SecurityDataClient:
                     flags=flags,
                 )
         sources["rugcheck"] = rc_status
+        recorder.capture(sources["rugcheck"], activity=activity, liquidity=liquidity,
+                         holders=holders, flags=flags)
 
         # 2. DexScreener pair & security telemetry (read-only GET)
         dexscreener_url = f"{self.DEXSCREENER_BASE_URL}/{address}"
@@ -503,6 +509,8 @@ class SecurityDataClient:
                     updated_at=market_data.updated_at,
                 )
         sources["dexscreener"] = ds_status
+        recorder.capture(sources["dexscreener"], activity=activity, liquidity=liquidity,
+                         holders=holders, flags=flags)
 
         # 3. DexTools audit report (read-only GET, official API only, no scraping)
         dextools_url = f"{self.DEXTOOLS_BASE_URL}/{address}/audit"
@@ -541,6 +549,8 @@ class SecurityDataClient:
                         flags=flags,
                     )
         sources["dextools"] = dt_status
+        recorder.capture(sources["dextools"], activity=activity, liquidity=liquidity,
+                         holders=holders, flags=flags)
 
         # 4. GMGN Agent API read-only security info (only if account has access, no scraping, no trading)
         gmgn_url = f"{self.GMGN_BASE_URL}/{address}"
@@ -606,6 +616,9 @@ class SecurityDataClient:
                         )
             sources["gmgn"] = gmgn_status
 
+        recorder.capture(sources["gmgn"], activity=activity, liquidity=liquidity,
+                         holders=holders, flags=flags)
+
         normalized_flags = self._build_normalized_flags(
             authorities=authorities,
             holders=holders,
@@ -636,6 +649,7 @@ class SecurityDataClient:
             overall_status = "unavailable"
 
         ai_context_payload = {
+            "normalized_data": recorder.data.model_dump(mode="json"),
             "address": address,
             "overall_status": overall_status,
             "read_only": True,
@@ -659,6 +673,7 @@ class SecurityDataClient:
         }
 
         return TokenSecurityData(
+            normalized_data=recorder.data,
             address=address,
             overall_status=overall_status,
             updated_at=now,
@@ -931,8 +946,8 @@ class SecurityDataClient:
                     LiquidityPoolSecurity(
                         dex=str(mkt.get("marketType")) if mkt.get("marketType") else None,
                         pair_address=pubkey,
-                        liquidity_usd=round(locked_usd + (unlocked_usd or 0.0), 2)
-                        if locked_usd is not None
+                        liquidity_usd=round(locked_usd + unlocked_usd, 2)
+                        if locked_usd is not None and unlocked_usd is not None
                         else None,
                         lp_locked_pct=round(locked_pct, 2) if locked_pct is not None else None,
                         lp_locked_usd=round(locked_usd, 2) if locked_usd is not None else None,
