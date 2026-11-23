@@ -1,5 +1,9 @@
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 from typing import Literal
 from uuid import uuid4
 
@@ -47,6 +51,10 @@ app = FastAPI(
 )
 app.state.settings = Settings.from_env()
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
+_recent_reports: OrderedDict = OrderedDict()
+_report_lock = Lock()
+REPORT_TTL_SECONDS = 300
+REPORT_CACHE_SIZE = 64
 
 
 def validate_solana_address(address: str) -> None:
@@ -99,6 +107,10 @@ class TokenReportResponse(AnalysisResponse):
     sources_status: dict[str, str] = Field(default_factory=dict)
     source_errors: list[SourceError] = Field(default_factory=list)
     errors: list[SourceError] = Field(default_factory=list)
+
+
+class AIReportRequest(BaseModel):
+    report_id: str | None = Field(default=None, min_length=36, max_length=36)
 
 
 @app.exception_handler(RequestValidationError)
@@ -183,7 +195,7 @@ def analyse_token(
             detail="MARKET_DATA_TIMEOUT" if timed_out else "MARKET_DATA_UNAVAILABLE",
         ) from error
 
-    return TokenReportResponse(
+    report = TokenReportResponse(
         id=str(uuid4()),
         subject_type="token",
         address=payload.address,
@@ -199,6 +211,11 @@ def analyse_token(
         source_errors=combined.source_errors,
         errors=combined.source_errors,
     )
+    with _report_lock:
+        _recent_reports[report.id] = (monotonic(), report)
+        if len(_recent_reports) > REPORT_CACHE_SIZE:
+            _recent_reports.popitem(last=False)
+    return report
 
 
 @app.get("/api/tokens/{address}/security", response_model=TokenSecurityData)
@@ -215,8 +232,25 @@ def analyse_token_facts(
     address: str,
     security_provider: SecurityDataClient = Depends(get_security_client),
     ai: AIAnalysisClient = Depends(get_ai_client),
+    listing: ListingClient = Depends(get_listing_client),
+    local: LocalResearchClient = Depends(get_local_research_client),
+    request: AIReportRequest | None = None,
 ) -> AIAnalysisResult:
     validate_solana_address(address)
+    if request is not None and request.report_id is not None:
+        with _report_lock:
+            cached = _recent_reports.get(request.report_id)
+        if cached is None or cached[1].address != address or monotonic() - cached[0] > REPORT_TTL_SECONDS:
+            return AIAnalysisResult(status="unavailable", reason="report_expired")
+        snapshot = cached[1].model_dump(mode="json", exclude_none=True,
+                                       include={"market_data","security_data","onchain_data",
+                                                "gmgn_activity","sources_status","source_errors"})
+        with ThreadPoolExecutor(max_workers=2) as worker:
+            listing_read = worker.submit(listing.fetch, address)
+            rpc_read = worker.submit(local.fetch, address)
+            snapshot["listing"] = listing_read.result().model_dump(mode="json", exclude_none=True)
+            snapshot["local_research"] = rpc_read.result()
+        return ai.analyse_report(snapshot, address=address)
     report = security_provider.fetch_token_security(address)
     try:
         return ai.analyse(report.normalized_data, address=address)

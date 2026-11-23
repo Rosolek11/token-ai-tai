@@ -175,14 +175,6 @@ window.TokenAI = (() => {
     const sellTax = formatPlainPercent(ver.sell_tax_pct);
     setVal('buy_sell_tax', buyTax === 'No data' && sellTax === 'No data' ? 'No data' : `${buyTax} / ${sellTax}`);
 
-    const openSrc = formatBoolFlag(auth.is_open_source, 'Verified', 'Unverified');
-    const proxy = formatBoolFlag(auth.is_proxy, 'Proxy', 'No proxy');
-    setVal('contract_verification', openSrc === 'No data' && proxy === 'No data' ? 'No data' : `${openSrc} · ${proxy}`);
-
-    const bl = formatBoolFlag(ver.is_blacklisted, 'Blacklisted', 'Clean');
-    const scam = formatBoolFlag(ver.is_potentially_scam, 'Scam flag', 'Clean');
-    setVal('blacklist_scam_check', bl === 'No data' && scam === 'No data' ? 'No data' : `${bl} · ${scam}`);
-
     setVal('holder_count', formatCompactNumber(holders.holder_count));
     setVal('top_holder_pct', formatPlainPercent(holders.top_holder_pct));
     setVal('top_holder_address', holders.top_holder_address ? `Top wallet: ${shortenAddress(holders.top_holder_address)}` : 'Largest wallet share');
@@ -232,18 +224,9 @@ window.TokenAI = (() => {
     const s5m = parseMarketNumber(act.sells_5m);
     setVal('txns_short_term', [b1h, s1h, b5m, s5m].every(v => v === null) ? 'No data' : `1h: ${b1h ?? 'No data'} buys / ${s1h ?? 'No data'} sells · 5m: ${b5m ?? 'No data'} buys / ${s5m ?? 'No data'} sells`);
 
-    const age = parseMarketNumber(act.pair_age_hours);
-    const boosts = parseMarketNumber(act.active_boosts);
-    setVal('pair_age_boosts', age === null && boosts === null ? 'No data' : `${age !== null ? `${age}h old` : 'Age n/a'} · ${boosts ?? 0} boosts`);
-    setVal('dex_list', Array.isArray(act.dex_list) && act.dex_list.length > 0 ? `DEXes: ${act.dex_list.join(', ')}` : 'Pool maturity & DEXes');
-
     const sup = formatCompactNumber(act.total_supply);
     const dec = parseMarketNumber(act.token_decimals);
     setVal('supply_decimals', sup === 'No data' && dec === null ? 'No data' : `${sup}${dec !== null ? ` (${dec} dec)` : ''}`);
-
-    const jup = formatBoolFlag(ver.jupiter_verified, 'Jupiter ✓', 'Unverified');
-    setVal('verification_status', jup);
-    setVal('social_links', Array.isArray(ver.socials) && ver.socials.length > 0 ? `${ver.socials.length} social link(s) · ${ver.websites?.length || 0} web` : 'Jupiter, RugCheck & socials');
 
     const countEl = document.getElementById('security-flags-count');
     const flags = Array.isArray(sec.flags) ? sec.flags : [];
@@ -258,25 +241,26 @@ window.TokenAI = (() => {
       top_holder_pct: ['holders','top_holder_pct'], top_5_holders_pct: ['holders','top_5_holders_pct'],
       top_10_holders_pct: ['holders','top_10_holders_pct'], creator_balance_pct: ['holders','creator_balance_pct'],
     };
-    secEl.querySelectorAll?.('[data-security-value]').forEach(node => {
+    secEl.querySelectorAll?.('dd[data-security-value]').forEach(node => {
       const key = node.getAttribute('data-security-value');
       const groupField = sourceFields[key];
       const fact = groupField ? normalized[groupField[0]]?.[groupField[1]] : null;
       const parent = node.closest?.('.market-metric');
       if (!parent) return;
-      let meta = parent.querySelector('[data-security-provenance]');
-      if (!meta && typeof document.createElement === 'function') {
-        meta = document.createElement('small'); meta.dataset.securityProvenance = 'true'; parent.append(meta);
-      }
-      if (!meta) return;
-      const provider = fact?.sourceId || (sourceFields[key] ? 'Source unavailable' : 'Security aggregate');
-      const timestamp = fact?.timestamp || sec.updated_at;
-      meta.textContent = `${provider.toUpperCase()} · Retrieved ${formatUpdatedAt(timestamp)}`;
       const oldLink = parent.querySelector('[data-provenance-link]');
-      if (oldLink && !fact?.url) oldLink.remove();
-      if (fact?.url) {
-        try { const url = new URL(fact.url); if (url.protocol === 'https:') { let link = parent.querySelector('[data-provenance-link]'); if (!link) { link = document.createElement('a'); link.dataset.provenanceLink = 'true'; link.target = '_blank'; link.rel = 'noopener noreferrer'; parent.append(link); } link.href = url.href; link.textContent = `Verify ${provider.toUpperCase()} ↗`; } }
-        catch { /* Invalid provider links are shown as unavailable. */ }
+      if (oldLink) oldLink.remove();
+      if (fact?.sourceId && fact.url) {
+        try {
+          const url = new URL(fact.url);
+          if (url.protocol !== 'https:') return;
+          const link = document.createElement('a');
+          link.dataset.provenanceLink = 'true';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.href = url.href;
+          link.textContent = `Verify ${fact.sourceId.toUpperCase()} ↗`;
+          parent.append(link);
+        } catch { /* Invalid provider links are shown as unavailable. */ }
       }
     });
 

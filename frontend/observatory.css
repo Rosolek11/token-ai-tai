@@ -416,3 +416,25 @@
   .workspace-ready .warning-filters button { font-size: 11px; padding: 10px 11px; }
   .workspace-ready .lens-detail { font-size: 12px; }
 }
+
+.workspace-ready .workspace-pane::before,
+.workspace-ready .market-metric dt > span,
+.workspace-ready .workspace-tab > span { display: none; }
+.workspace-ready .workspace-tab strong { font-size: 15px; }
+.workspace-ready .report-status { font-size: 14px; color: #bed1e9; }
+.workspace-ready .market-metrics,
+.workspace-ready .security-metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.workspace-ready .market-metric dt,
+.workspace-ready .lens-reading dt { color: #d4e3f6; font-size: 14px; letter-spacing: normal; }
+.workspace-ready .market-metric dd { margin: 8px 0 6px; font-size: clamp(23px,3vw,36px); }
+.workspace-ready .market-metric small,
+.workspace-ready .lens-reading small,
+.workspace-ready .lens-detail { color: #b4c9e3; font-size: 13px; }
+.workspace-ready .ai-summary-text { color: #e1edfb; font-size: clamp(16px,1.6vw,18px); line-height: 1.7; max-width: 74ch; }
+.workspace-ready .ai-metric p { font-size: 14px; }
+.workspace-ready .ai-rating { font-size: 19px; color: #a6d3ff; }
+.workspace-ready .coverage-note { font-size: 13px; }
+@media (max-width: 520px) {
+  .workspace-ready .market-metrics,
+  .workspace-ready .security-metrics-grid { grid-template-columns: minmax(0,1fr); }
+}

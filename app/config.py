@@ -1,6 +1,6 @@
 """Configuration loaded from environment variables, never from committed secrets."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import environ
 
 
@@ -15,6 +15,7 @@ class Settings:
     gmgn_api_key: str | None
     ai_api_key: str | None
     dextools_api_key: str | None = None
+    openrouter_api_key: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -37,4 +38,5 @@ class Settings:
             gmgn_api_key=optional_secret("GMGN_API_KEY"),
             ai_api_key=optional_secret("AI_API_KEY"),
             dextools_api_key=optional_secret("DEXTOOLS_API_KEY"),
+            openrouter_api_key=optional_secret("OPENROUTER_API_KEY"),
         )

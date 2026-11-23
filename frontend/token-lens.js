@@ -91,11 +91,11 @@
     if (metric.unit === 'USD') return root.TokenAI.formatUsd(metric.value);
     return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(metric.value)+metric.unit;
   }
-  function row(metric,index) {
+  function row(metric) {
     const node=el('div','lens-reading');node.dataset.known=String(metric.value !== null);
     node.dataset.unit=metric.unit;
-    node.append(el('dt',null,String(index+1).padStart(2,'0')+' / '+metric.label),el('dd',null,display(metric)));
-    const source=el('small',null,metric.source+(metric.value === null ? ' · No data':' · Observed'));
+    node.append(el('dt',null,metric.label),el('dd',null,display(metric)));
+    const source=el('small',null,metric.value === null ? 'No data' : metric.source);
     node.append(source);node.title=metric.detail;
     const detail=el('p','lens-detail',metric.detail);node.append(detail);return node;
   }
@@ -125,7 +125,7 @@
     const data=metrics(result);const top=data[0];
     ringValue.textContent=display(top);ring.style.setProperty('--concentration',(top.value ?? 0)+'%');ring.dataset.known=String(top.value !== null);
     annotation.textContent=top.value === null ? 'Concentration unavailable. No distribution is inferred.' : top.source+' / '+top.detail;
-    rail.replaceChildren(...data.slice(1,6).map((m,i)=>row(m,i+1)));
+    rail.replaceChildren(...data.slice(1,6).filter(metric => metric.value !== null).map(row));
     remaining.replaceChildren(...data.map(row));
     listing.textContent=loading ? 'DEX PROFILE / Checking source…' : 'DEX PROFILE / No result yet';
     if (!result || loading) return;

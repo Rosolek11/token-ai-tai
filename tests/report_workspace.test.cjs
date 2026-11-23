@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {warningModel,flagValue,activityWindowRows,analysisFactLinks} = require('../frontend/report-workspace.js');
+const {warningModel,flagValue,activityWindowRows,analysisFactLinks,uncertaintyModel,aiSummary} = require('../frontend/report-workspace.js');
 const sources = Object.fromEntries(['rugcheck','dexscreener','dextools','gmgn'].map(key => [key,{status:'ok'}]));
 test('warning titles omit raw account payloads but retain meaningful scalar values',()=>{
   assert.equal(flagValue('x'.repeat(1000)), '');
@@ -50,4 +50,35 @@ test('AI fact citations only include available values and verified HTTPS links',
   assert.equal(facts.length,2);
   assert.equal(facts[0].url,'https://example.test/fact');
   assert.equal(facts[1].url,null);
+});
+
+test('evidence separates incomplete feeds, conflicting observations, and real zero values', () => {
+  const model = uncertaintyModel({
+    market_data: {status:'ok',liquidity_usd:0},
+    onchain_data: {status:'partial',total_supply:100,metadata:{mint_authority:'So11111111111111111111111111111111111111112'}},
+    security_data: {
+      sources: {rugcheck:{status:'ok'},dextools:{status:'ok'},gmgn:{status:'ok'}},
+      market_activity: {total_supply:105},
+      flags: [
+        {source:'dextools',code:'dextools_honeypot',value:false},
+        {source:'gmgn',code:'gmgn_honeypot',value:true},
+        {source:'rugcheck',code:'mint_authority',value:'Renounced'},
+        {source:'rugcheck',code:'freeze_authority',value:'Renounced'},
+      ],
+    },
+  });
+  assert.equal(model.confidence,'limited');
+  assert.deepEqual(model.gaps,[['GMGN activity',undefined],['Solscan','partial']]);
+  assert.deepEqual(model.conflicts.map(item => item.label),['Honeypot status','Mint authority','Total supply']);
+  assert.deepEqual(model.conflicts[0].readings.map(item => item.value),[false,true]);
+  assert.equal(model.facts[0].value,0);
+  assert.equal(uncertaintyModel({market_data:{status:'no_data'}}).confidence,'unknown');
+});
+
+test('only validated completed output supplies an AI score or conclusion', () => {
+  const completed = {status:'completed',score:0,summary:'Observed data'};
+  assert.deepEqual(aiSummary(completed),{score:0,analysis:'Observed data'});
+  assert.equal(aiSummary({...completed,status:'timeout'}),null);
+  assert.equal(aiSummary({...completed,rejected:true}),null);
+  assert.equal(aiSummary({...completed,score:null}),null);
 });
