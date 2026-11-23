@@ -5,6 +5,9 @@ window.TokenAI = (() => {
     INVALID_ADDRESS: 'Enter a valid Solana address: 32–44 Base58 characters that decode to 32 bytes.',
     MARKET_DATA_TIMEOUT: 'The market data source took too long to respond. Please try again.',
     MARKET_DATA_UNAVAILABLE: 'The market data source is temporarily unavailable. Please try again.',
+    GITHUB_SIGN_IN_REQUIRED: 'Your GitHub session ended. Sign in again to use Copilot.',
+    GITHUB_OAUTH_NOT_CONFIGURED: 'GitHub sign-in is not configured on this server.',
+    COPILOT_ANALYSIS_IN_PROGRESS: 'Copilot is already analysing a report for this session.',
   };
   function isSolanaAddress(address) {
     if (typeof address !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return false;

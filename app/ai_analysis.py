@@ -1,13 +1,14 @@
 """Strict boundary between source reports and the model input."""
 from datetime import datetime, timezone
 import json
+import logging
 import math
 import sqlite3
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from uuid import uuid4
 
 import httpx
-from fastapi import Request
+from fastapi import HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from app.ai_report import AIMetric, METRICS, REPORT_PROMPT_VERSION, detailed_messages, report_facts
@@ -23,6 +24,8 @@ MAX_SCORE = 100
 MODEL = "gpt-4o-mini"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "inclusionai/ling-3.2-flash:free"
+BAZAARLINK_URL = "https://api.bazaarlink.ai/v1/chat/completions"
+BAZAARLINK_MODEL = "deepseek/deepseek-v4-flash-0731free"
 SYSTEM_PROMPT = (
     "Prompt version: " + PROMPT_VERSION + ". Analyze only the supplied normalized "
     "Solana token facts. Cite sourceId and field for each conclusion. Missing facts "
@@ -78,6 +81,63 @@ OPENROUTER_OPTIONS = {
         },
     },
 }
+
+
+def output_schema(deep: bool) -> dict:
+    schema = OPENROUTER_OPTIONS["response_format"]["json_schema"]["schema"]
+    if not deep:
+        return schema
+    return {
+        **schema,
+        "properties": {**schema["properties"], "metrics": {"type": "array", "items": {
+            "type": "object", "properties": {
+                "key": {"type": "string", "enum": list(METRICS)},
+                "score": {"type": ["number", "null"]},
+                "rationale": {"type": "string"},
+                "fact_ids": {"type": "array", "items": {"type": "string"}},
+            }, "required": ["key", "score", "rationale", "fact_ids"], "additionalProperties": False,
+        }}},
+        "required": [*schema["required"], "metrics"],
+    }
+
+
+def copilot_report_schema(fact_count: int) -> dict:
+    fact_ids = {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": fact_count}}
+    metric = {
+        "type": "object", "additionalProperties": False, "required": ["score", "rationale", "fact_ids"],
+        "properties": {"score": {"type": ["number", "null"]}, "rationale": {"type": "string"},
+                       "fact_ids": fact_ids},
+    }
+    schema = output_schema(False)
+    return {**schema, "required": [*schema["required"], "metrics"], "properties": {
+        **schema["properties"], "fact_ids": {**fact_ids, "minItems": 1},
+        "metrics": {"type": "object", "additionalProperties": False, "required": list(METRICS),
+                    "properties": dict.fromkeys(METRICS, metric)},
+    }}
+
+
+def decode_copilot_report(content: str, fact_paths: tuple[str, ...]) -> str:
+    try:
+        report = json.loads(content, parse_constant=_reject_non_finite_constant)
+    except (TypeError, ValueError) as error:
+        raise AIOutputValidationError("invalid_json", "Expected a structured Copilot report") from error
+    if not isinstance(report, dict):
+        raise AIOutputValidationError("invalid_json", "Expected a structured Copilot report")
+
+    def decode_ids(ids):
+        if not isinstance(ids, list) or any(type(index) is not int or not 1 <= index <= len(fact_paths) for index in ids):
+            raise AIOutputValidationError("invalid_fact_id", "Copilot cited an unknown evidence number")
+        return [fact_paths[index - 1] for index in ids]
+
+    metrics = report.get("metrics")
+    if (not isinstance(metrics, dict) or metrics.keys() != METRICS.keys()
+            or any(not isinstance(value, dict) or value.keys() != {"score", "rationale", "fact_ids"}
+                   for value in metrics.values())):
+        raise AIOutputValidationError("invalid_metrics", "Expected one complete assessment for each dimension")
+    report["fact_ids"] = decode_ids(report.get("fact_ids"))
+    report["metrics"] = [{**metric, "key": key, "fact_ids": decode_ids(metric["fact_ids"])}
+                         for key, metric in metrics.items()]
+    return json.dumps(report, ensure_ascii=False)
 
 
 class AIAnalysisResult(BaseModel):
@@ -328,10 +388,14 @@ class AIAnalysisClient:
         *,
         store: AIAnalysisStore | None = None,
         openrouter_api_key: str | None = None,
+        bazaarlink_api_key: str | None = None,
+        completion: Callable[[list[dict], dict], str] | None = None,
     ):
         self.client = client
         self.api_key = api_key
         self.openrouter_api_key = openrouter_api_key
+        self.bazaarlink_api_key = bazaarlink_api_key
+        self.completion = completion
         self.store = store if store is not None else AIAnalysisStore()
 
     @property
@@ -351,10 +415,11 @@ class AIAnalysisClient:
                        "critical_flags_count","warning_flags_count","safe_flags_count","total_flags_count",
                    }):
             return AIAnalysisResult(status="no_data", prompt_version=REPORT_PROMPT_VERSION)
-        messages = detailed_messages(facts)
+        copilot = self.completion is not None
+        messages = detailed_messages(facts, copilot=copilot)
         if len(messages[1]["content"].encode()) > 128_000:
             return AIAnalysisResult(status="input_too_large", prompt_version=REPORT_PROMPT_VERSION)
-        return self._analyse_messages(messages, {key:key for key in facts}, address, deep=True)
+        return self._analyse_messages(messages, {path: path for path in facts}, address, deep=True)
 
     def analyse(
         self,
@@ -373,55 +438,78 @@ class AIAnalysisClient:
 
     def _analyse_messages(self, messages, allowed_fact_ids, address, *, deep=False):
         version = REPORT_PROMPT_VERSION if deep else PROMPT_VERSION
-        api_key = self.openrouter_api_key or self.api_key
+        if self.completion is not None:
+            try:
+                schema = copilot_report_schema(len(allowed_fact_ids)) if deep else output_schema(False)
+                content = self.completion(messages, schema)
+            except TimeoutError as error:
+                return AIAnalysisResult(status="timeout", reason=getattr(error, "reason", None), prompt_version=version)
+            except Exception:
+                # Runtime exceptions can contain sensitive upstream diagnostics.
+                return AIAnalysisResult(status="unavailable", reason="copilot_unavailable", prompt_version=version)
+            return self._validate_and_save(content, allowed_fact_ids, address, version, deep)
+        api_key = self.bazaarlink_api_key or self.openrouter_api_key or self.api_key
         if not api_key:
             return AIAnalysisResult(status="not_configured", prompt_version=version)
 
-        use_openrouter = bool(self.openrouter_api_key)
+        use_bazaarlink = bool(self.bazaarlink_api_key)
+        use_openrouter = not use_bazaarlink and bool(self.openrouter_api_key)
+        url, model = self.URL, MODEL
+        headers = {"Authorization": f"Bearer {api_key}"}
+        if use_bazaarlink:
+            url, model = BAZAARLINK_URL, BAZAARLINK_MODEL
+            headers["X-Free-Fallback"] = "false"
+        elif use_openrouter:
+            url, model = OPENROUTER_URL, OPENROUTER_MODEL
         body = {
-            "model": OPENROUTER_MODEL if use_openrouter else MODEL,
+            "model": model,
             "messages": messages,
             "max_tokens": 4100 if deep else 1000,
         }
         if use_openrouter:
             body.update(OPENROUTER_OPTIONS)
-        if deep:
-            schema = OPENROUTER_OPTIONS["response_format"]["json_schema"]["schema"]
+        if use_bazaarlink:
+            body["response_format"] = {"type": "json_object"}
+            body["include_reasoning"] = False
+        elif deep:
             body["response_format"] = {"type":"json_schema", "json_schema":{
-                "name":"deep_token_analysis","strict":True,"schema":{
-                    **schema,
-                    "properties":{**schema["properties"],"metrics":{"type":"array","items":{
-                        "type":"object","properties":{
-                            "key":{"type":"string","enum":list(METRICS)},
-                            "score":{"type":["number","null"]},
-                            "rationale":{"type":"string"},
-                            "fact_ids":{"type":"array","items":{"type":"string"}},
-                        },"required":["key","score","rationale","fact_ids"],"additionalProperties":False,
-                    }}},
-                    "required":[*schema["required"],"metrics"],
-                },
+                "name":"deep_token_analysis","strict":True,"schema":output_schema(deep),
             }}
         try:
             response = self.client.post(
-                OPENROUTER_URL if use_openrouter else self.URL,
-                headers={"Authorization": f"Bearer {api_key}"},
+                url,
+                headers=headers,
                 json=body,
-                timeout=75.0 if deep else OPENROUTER_TIMEOUT_SECONDS if use_openrouter else TIMEOUT_SECONDS,
+                timeout=75.0 if deep else OPENROUTER_TIMEOUT_SECONDS if (use_openrouter or use_bazaarlink) else TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
         except httpx.TimeoutException:
             return AIAnalysisResult(status="timeout", prompt_version=version)
         except httpx.HTTPStatusError as error:
+            if use_bazaarlink:
+                reason = {
+                    401: "bazaarlink_invalid_api_key",
+                    402: "bazaarlink_insufficient_credits",
+                    429: "bazaarlink_rate_limited",
+                }.get(error.response.status_code)
+                return AIAnalysisResult(status="unavailable", reason=reason, prompt_version=version)
             reason = {401: "invalid_api_key", 429: "rate_limited"}.get(error.response.status_code)
             return AIAnalysisResult(status="unavailable", reason=reason if use_openrouter else None, prompt_version=version)
         except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
             return AIAnalysisResult(status="unavailable", prompt_version=version)
 
+        return self._validate_and_save(content, allowed_fact_ids, address, version, deep)
+
+    def _validate_and_save(self, content, allowed_fact_ids, address, version, deep):
         try:
+            if deep and self.completion is not None:
+                content = decode_copilot_report(content, tuple(allowed_fact_ids))
             validated = validate_model_output(content, allowed_fact_ids)
             metrics = self._validate_metrics(content, allowed_fact_ids) if deep else []
         except AIOutputValidationError as error:
+            if self.completion is not None:
+                logging.getLogger("uvicorn.error").warning("Copilot report rejected reason=%s", error.reason)
             return AIAnalysisResult(
                 address=address,
                 status="unavailable",
@@ -477,9 +565,33 @@ class AIAnalysisClient:
 _DEFAULT_AI_STORE = AIAnalysisStore()
 
 
-def get_ai_client(request: Request) -> Iterator[AIAnalysisClient]:
+def get_ai_client(request: Request, response: Response) -> Iterator[AIAnalysisClient]:
     store = getattr(request.app.state, "ai_store", _DEFAULT_AI_STORE)
     settings = request.app.state.settings
+    if settings.ai_provider == "github_copilot":
+        from functools import partial
+        from app import copilot_analysis, github_auth
+
+        response.headers.update(github_auth.PRIVATE_HEADERS)
+        if request.method == "POST":
+            github_auth.require_origin(request)
+        if not github_auth.configured(settings):
+            raise HTTPException(503, "GITHUB_OAUTH_NOT_CONFIGURED", headers=github_auth.PRIVATE_HEADERS)
+        session = github_auth.current_session(request)
+        if session is None:
+            raise HTTPException(401, "GITHUB_SIGN_IN_REQUIRED", headers=github_auth.PRIVATE_HEADERS)
+        generating = request.method == "POST"
+        if generating and not session.inference_lock.acquire(blocking=False):
+            raise HTTPException(409, "COPILOT_ANALYSIS_IN_PROGRESS", headers=github_auth.PRIVATE_HEADERS)
+        try:
+            with httpx.Client() as client:
+                yield AIAnalysisClient(client, None, store=session.store,
+                                       completion=partial(copilot_analysis.complete, session.token))
+        finally:
+            if generating:
+                session.inference_lock.release()
+        return
     with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as client:
         yield AIAnalysisClient(client, settings.ai_api_key, store=store,
-                               openrouter_api_key=settings.openrouter_api_key)
+                               openrouter_api_key=settings.openrouter_api_key,
+                               bazaarlink_api_key=settings.bazaarlink_api_key)

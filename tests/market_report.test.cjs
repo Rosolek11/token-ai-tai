@@ -58,7 +58,7 @@ function page(fetchHandler = async () => { throw new Error('Unexpected request')
     document: { getElementById: name => elements[name] },
     location: { origin: 'https://token.example.test', pathname, assign: url => navigations.push(url) },
     addEventListener: (name, handler) => { listeners[name] = handler; },
-    setTimeout, clearTimeout, AbortController, TypeError, URL, Intl, Date, fetch: fetchHandler,
+    setTimeout, clearTimeout, AbortController, TypeError, URL, URLSearchParams, Intl, Date, fetch: fetchHandler,
     navigator: { clipboard: { writeText: async () => {} } },
   };
   context.window = context;
@@ -114,6 +114,49 @@ const data = (market = {}) => ({
   },
 });
 const ok = value => ({ ok: true, json: async () => value });
+test('the first visit offers GitHub sign-in before local registration', async () => {
+  const current = page(async url => {
+    if (url === '/api/client-config') return config();
+    if (url === '/api/auth/github/session') return ok({configured:false, setupAvailable:true, login:null});
+    return ok({...data(), copilot_enabled:true});
+  }, '/token/' + address);
+  const screen = mountWorkspace(current);
+  await current.report();
+  await new Promise(resolve => setImmediate(resolve));
+  const account = screen('ai').nodes.find(node => node.className === 'ai-summary')
+    .nodes.find(node => node.className === 'copilot-account');
+  const link = account.nodes[1].nodes[0];
+  assert.equal(link.textContent, 'Sign in with GitHub');
+  assert.equal(link.href, `/api/auth/github/login?address=${address}`);
+});
+test('Copilot report signs in separately and generates only after a click', async () => {
+  const requests = [];
+  const current = page(async (url, options) => {
+    requests.push([url, options?.method]);
+    if (url === '/api/client-config') return config();
+    if (url === '/api/auth/github/session') return ok({configured:true, login:'alice'});
+    if (url === '/api/auth/github/logout') return {ok:true};
+    if (url.endsWith('/ai-analysis')) return ok(options.method === 'POST' ?
+      {status:'completed', score:41, summary:'Report from Alice’s Copilot.'} : {status:'no_data'});
+    return ok({...data(), copilot_enabled:true});
+  }, '/token/' + address);
+  const screen = mountWorkspace(current);
+  await current.report();
+  await new Promise(resolve => setImmediate(resolve));
+  const ai = screen('ai').nodes.find(node => node.className === 'ai-summary');
+  const account = ai.nodes.find(node => node.className === 'copilot-account');
+  assert.equal(account.hidden, false);
+  const [details, actions] = account.nodes;
+  assert.equal(details.nodes[1].textContent, '@alice');
+  assert.equal(requests.filter(([url,method]) => url.endsWith('/ai-analysis') && method === 'POST').length, 0);
+  await actions.nodes[0].listeners.click();
+  assert.equal(requests.filter(([url,method]) => url.endsWith('/ai-analysis') && method === 'POST').length, 1);
+  const summary = ai.nodes.find(node => node.id === 'ai-summary-text');
+  assert.equal(summary.textContent, 'Report from Alice’s Copilot.');
+  await account.nodes[1].nodes[1].listeners.click();
+  assert.equal(summary.textContent, '');
+  assert.equal(account.nodes[1].nodes[0].href, `/api/auth/github/login?address=${address}`);
+});
 for (const value of [undefined, null, '', ' ', '\t\n', false, true, [], {}, 'NaN', 'Infinity', 'invalid']) {
   test(`missing or invalid metric stays unavailable: ${JSON.stringify(value)}`, () => {
     const current = page();

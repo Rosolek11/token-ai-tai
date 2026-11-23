@@ -45,7 +45,9 @@ prawdopodobieństwem ani rekomendacją inwestycyjną. Dla każdej metryki bez wy
 danych wpisz null i wyjaśnij, czego brakuje. Nie przyznawaj 50 za niewiedzę.
 Ocena ogólna ma odzwierciedlać tylko udokumentowane wymiary. Krytyczny potwierdzony
 sygnał bezpieczeństwa powinien istotnie obniżyć wynik niezależnie od aktywności rynku.
+"""
 
+REPORT_FORMAT = """
 Zwróć JSON z score, summary, fact_ids i metrics. W summary napisz 3–5 konkretnych
 akapitów o najważniejszych ustaleniach, wzajemnym wpływie ryzyk, sprzecznościach
 i brakach. Odnośniki to wyłącznie dokładne klucze z facts. Podaj je w fact_ids
@@ -53,7 +55,21 @@ podsumowania i oddzielnie w każdej metryce; dla oceny liczbowej wymagany jest
 co najmniej jeden pasujący fakt. Każdy element metrics to key, score, rationale,
 fact_ids. Zwróć wszystkie poniższe klucze dokładnie raz. Uzasadnij je osobno,
 odwołując się do konkretnych wartości i porównań:
-""" + "\n".join(f"- {key}: {description}" for key, description in METRICS.items())
+"""
+
+COPILOT_FORMAT = """
+Zwróć JSON z score, summary, fact_ids i metrics. W summary napisz trzy krótkie
+akapity po polsku (120–180 słów łącznie). Użyj konkretnych wartości i wyjaśnij główne
+ryzyka, niezgodności oraz ograniczenia. Każdy klucz w facts to numer dowodu, którego
+wartość zawiera nazwę pola i odczyt. W fact_ids podaj istniejące numery dowodów jako
+liczby całkowite. Podsumowanie wymaga od 1 do 6 takich numerów.
+Wypełnij wszystkie klucze obiektu metrics. Każdy zawiera score, rationale i fact_ids.
+Uzasadnij każdą ocenę w 1–2 krótkich zdaniach. Dla oceny liczbowej podaj 1–2 trafne
+numery dowodów. Przy braku wystarczających danych ustaw score na null i użyj pustej
+listy fact_ids, jeśli nie ma faktu wyjaśniającego ten brak.
+"""
+
+METRIC_DEFINITIONS = "\n".join(f"- {key}: {description}" for key, description in METRICS.items())
 
 _STATUS = re.compile(r"[a-z][a-z0-9_]{0,60}\Z")
 _DATE = re.compile(r"\d{4}-\d\d-\d\dT[0-9:.+Z-]+\Z")
@@ -110,8 +126,11 @@ def report_facts(snapshot: dict) -> dict:
     return facts
 
 
-def detailed_messages(facts: dict) -> list[dict]:
+def detailed_messages(facts: dict, *, copilot: bool = False) -> list[dict]:
+    if copilot:
+        facts = {str(index): [path, value] for index, (path, value) in enumerate(facts.items(), 1)}
+    instructions = COPILOT_FORMAT if copilot else REPORT_FORMAT
     return [
-        {"role":"system","content":REPORT_PROMPT},
+        {"role":"system","content":REPORT_PROMPT + instructions + METRIC_DEFINITIONS},
         {"role":"user","content":json.dumps({"facts":facts},ensure_ascii=False,allow_nan=False,separators=(",",":"))},
     ]

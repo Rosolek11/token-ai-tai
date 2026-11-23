@@ -8,6 +8,75 @@ const marketUnavailable = document.getElementById('market-unavailable');
 let reportAddress = '';
 let inFlight = false;
 let aiRequestId = 0;
+function requestAnalysis(base, result, timeout = 120000) {
+  return TokenAI.requestJson(base + analysisPath(), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(result.id ? {report_id:result.id} : {}),
+  }, timeout);
+}
+
+function analysisPath() {
+  return `/api/tokens/${encodeURIComponent(reportAddress)}/ai-analysis`;
+}
+
+async function setUpCopilot(result, requestId) {
+  const workspace = window.ReportWorkspace;
+  let account;
+  try { account = await TokenAI.requestJson('/api/auth/github/session'); }
+  catch { account = { statusUnavailable: true }; }
+  if (requestId !== aiRequestId) return;
+  const loginHref = `/api/auth/github/login?address=${encodeURIComponent(reportAddress)}`;
+  const callbackStatus = new URLSearchParams(window.location.search).get('github');
+  const callbackFailed = ['login_failed', 'setup_failed'].includes(callbackStatus);
+  if (callbackFailed) window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
+  let running = false;
+  let ran = false;
+
+  function showAccount(busy = false) {
+    workspace?.renderCopilotAccount(account, {loginHref, run, logout, busy});
+  }
+  async function run() {
+    if (running || requestId !== aiRequestId) return;
+    running = true;
+    ran = true;
+    showAccount(true);
+    workspace?.renderAI(result, {message:'Copilot is analysing the report. This may take a few minutes.'}, true);
+    try {
+      const output = await requestAnalysis('', result, 200000);
+      if (requestId === aiRequestId) workspace?.renderAI(result, output);
+    } catch (error) {
+      if (requestId === aiRequestId) workspace?.renderAI(result, {message: error.message});
+    } finally {
+      running = false;
+      if (requestId === aiRequestId) showAccount();
+    }
+  }
+  async function logout() {
+    showAccount(true);
+    try {
+      const response = await fetch('/api/auth/github/logout', {method:'POST', cache:'no-store'});
+      if (!response.ok) throw new Error();
+      if (requestId !== aiRequestId) return;
+      account = {...account, login:null};
+      showAccount();
+      workspace?.renderAI(result, {status:'copilot_idle'});
+    } catch {
+      if (requestId !== aiRequestId) return;
+      showAccount();
+      workspace?.renderAI(result, {message:'Could not sign out of GitHub. Try again.'});
+    }
+  }
+  showAccount();
+  workspace?.renderAI(result, {status:'copilot_idle', reason: callbackFailed ? `github_${callbackStatus}` : null});
+  if (account.login && !callbackFailed) {
+    try {
+      const saved = await TokenAI.requestJson(analysisPath());
+      if (!ran && account.login && requestId === aiRequestId && saved.status === 'completed') {
+        workspace?.renderAI(result, saved);
+      }
+    } catch { /* A failed history lookup does not prevent a new analysis. */ }
+  }
+}
 try { reportAddress = decodeURIComponent(window.location.pathname.split('/')[2] || ''); }
 catch { /* Invalid URL encoding is handled as an invalid address. */ }
 document.getElementById('report-address').textContent = reportAddress || 'Invalid address';
@@ -50,12 +119,14 @@ async function loadReport() {
     }
     TokenAI.updateMarketReport(result, reportAddress);
     window.ReportWorkspace?.render(result);
-    window.ReportWorkspace?.renderAI(result, null, true);
-    TokenAI.requestJson(`${base}/api/tokens/${encodeURIComponent(reportAddress)}/ai-analysis`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(result.id ? {report_id:result.id} : {}),
-    }, 90000).then(aiResult => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, aiResult); })
-      .catch(() => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, { status: 'unavailable' }); });
+    if (result.copilot_enabled) {
+      window.ReportWorkspace?.renderAI(result, {status:'copilot_idle'});
+      void setUpCopilot(result, currentAiRequest);
+    } else {
+      window.ReportWorkspace?.renderAI(result, null, true);
+      requestAnalysis(base, result).then(aiResult => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, aiResult); })
+        .catch(() => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, {status:'unavailable'}); });
+    }
     const unavailable = market.status === 'unavailable';
     const empty = !unavailable && (market.status === 'no_data' || market.pairs.length === 0);
     marketUnavailable.hidden = !unavailable;

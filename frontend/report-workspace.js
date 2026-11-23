@@ -402,6 +402,7 @@
   const activitySourceLinks = create('p','coverage-note'); panes.activity.append(activitySourceLinks);
   const activityTable = create('div','activity-windows'); panes.activity.append(activityTable);
   const aiPanel = create('section','ai-summary'); aiPanel.setAttribute('aria-live','polite');
+  const copilotPanel = create('div','copilot-account'); copilotPanel.hidden = true;
   const confidencePanel = create('div','ai-confidence');
   const confidence = create('strong');
   const confidenceNote = create('p');
@@ -423,7 +424,7 @@
   const aiCitations = create('ul','ai-citations'); aiCitations.id = 'ai-citations';
   const aiEvidence = create('details','ai-disclosure');
   aiEvidence.append(create('summary',null,'Available report facts'),create('h3',null,'Provider observations'),aiReasons,aiCitations);
-  aiPanel.append(confidencePanel, aiRating, aiText, aiMetrics, aiEvidence,
+  aiPanel.append(copilotPanel, confidencePanel, aiRating, aiText, aiMetrics, aiEvidence,
     create('p','coverage-note','Informational only. This is not investment advice.'));
   panes.ai.append(aiPanel);
   function renderActivity(result, loading) {
@@ -464,11 +465,31 @@
     const summary = loading ? null : aiSummary(response);
     aiRating.hidden = !summary;
     aiRating.textContent = summary ? `AI score · ${summary.score}/100` : '';
-    const failure = response?.rejected ? 'The AI result failed validation.' :
+    const rejection = {
+      invalid_fact_id:'The AI cited data outside this report. Run the analysis again to generate new evidence references.',
+      invalid_metrics:'The AI returned missing or unsupported scores. Run the analysis again to generate all assessments.',
+      invalid_score_range:'The AI returned an invalid score. Run the analysis again.',
+      invalid_json:'The AI returned an unreadable response. Run the analysis again.',
+      invalid_schema:'The AI returned an incomplete report. Run the analysis again.',
+    }[response?.reason];
+    const failure = response?.message || (response?.rejected ? rejection || 'The AI result failed validation.' :
       ({rate_limited:'OpenRouter rate limit reached. Try again later.',invalid_api_key:'OpenRouter rejected the configured API key.',report_expired:'This report expired. Refresh its data to run the AI analysis.'})[response?.reason] ||
+      ({
+        bazaarlink_rate_limited:'BazaarLink rate limit reached. Try again later.',
+        bazaarlink_invalid_api_key:'BazaarLink rejected the configured API key.',
+        bazaarlink_insufficient_credits:'BazaarLink reports no available credits.',
+        copilot_unavailable:'Copilot could not complete the analysis. Check your Copilot access or try again later.',
+        copilot_session_timeout:'Copilot took too long to open the session. Try again.',
+        copilot_answer_timeout:'Copilot took too long to generate the report. Try again.',
+        copilot_completion_timeout:'Copilot started returning a result, but the session did not finish. Try again.',
+        github_login_failed:'GitHub did not complete sign-in. Try again.',
+        github_setup_failed:'GitHub did not complete the first-time setup. Try signing in again.',
+      })[response?.reason] ||
       ({no_data:'AI analysis has no usable input facts.',timeout:'AI analysis timed out.',not_configured:'AI analysis is not configured.'})[response?.status] ||
-      'AI analysis is currently unavailable.';
-    aiText.textContent = loading ? 'AI analysis is loading…' : summary?.analysis || `${failure} Available facts are shown below.`;
+      'AI analysis is currently unavailable.');
+    aiText.textContent = loading ? response?.message || 'AI analysis is loading…' : summary?.analysis ||
+      (response?.status === 'copilot_idle' && !response.reason ? '' : `${failure} Available facts are shown below.`);
+    aiText.hidden = !aiText.textContent;
     const metrics = summary && Array.isArray(response.metrics) ? response.metrics : [];
     const rows = metrics.filter(metric => metric && Object.hasOwn(metricLabels,metric.key)).map(metric => {
       const scored = Number.isFinite(metric.score) && metric.score >= 0 && metric.score <= 100;
@@ -517,6 +538,8 @@
     if (!citations.length) aiCitations.append(create('li',null,'No source-backed facts are available.'));
   }
   root.ReportWorkspace = {render(result, loading = false) {
+    copilotPanel.hidden = true;
+    copilotPanel.replaceChildren();
     model = warningModel(result); pending = loading; draw();
     root.TokenLens?.render(result, loading);
     const holders = holderModel(result);
@@ -530,6 +553,27 @@
     renderAI(result, result?.ai_analysis, loading);
   }, renderAI(result, response, loading = false) {
     renderAI(result, response, loading);
+  }, renderCopilotAccount(account, {loginHref, run, logout, busy}) {
+    const details = create('div','copilot-account-details');
+    details.append(create('strong',null,'GitHub Copilot'));
+    const actions = create('div','copilot-account-actions');
+    if (account.login) {
+      const login = create('span','copilot-login',`@${account.login}`);
+      login.setAttribute('translate','no');
+      details.append(login, create('p',null,'Analysis uses your Copilot allowance.'));
+      const runButton = create('button','copilot-primary',busy ? 'Working…' : 'Run with Copilot');
+      const logoutButton = create('button',null,'Sign out');
+      for (const [button, handler] of [[runButton,run],[logoutButton,logout]]) {
+        button.type = 'button'; button.disabled = busy; button.addEventListener('click',handler); actions.append(button);
+      }
+    } else if (account.configured || account.setupAvailable) {
+      details.append(create('p',null,account.setupAvailable ? 'On first use, GitHub asks the owner to confirm Token AI. Then each user can sign in to their own account.' : 'Sign in to run the analysis with your own Copilot account.'));
+      const link = create('a','copilot-primary','Sign in with GitHub'); link.href = loginHref; actions.append(link);
+    } else {
+      details.append(create('p',null,account.statusUnavailable ? 'GitHub account status is unavailable. Refresh the report to try again.' : 'GitHub sign-in is not configured on this server.'));
+    }
+    copilotPanel.replaceChildren(details,actions);
+    copilotPanel.hidden = false;
   }, holderModel};
   select(root.location.hash.slice(1)); draw();
   root.addEventListener('hashchange',() => { const key = root.location.hash.slice(1); if (panes[key]) select(key); });

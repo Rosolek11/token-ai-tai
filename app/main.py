@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.trading_activity import GmgnActivity, GmgnClient, get_gmgn_client
 from app.config import Settings
+from app import github_auth
 from app.ai_analysis import AIAnalysisClient, AIAnalysisResult, get_ai_client
 from app.local_research import LocalResearchClient, get_local_research_client
 from app.listing_data import ListingClient, ListingStatus, get_listing_client
@@ -50,6 +51,8 @@ app = FastAPI(
     description="API MVP do analizy adresow Solany. Wyniki sa przeslankami, nie porada inwestycyjna.",
 )
 app.state.settings = Settings.from_env()
+app.state.github_sessions = github_auth.GitHubSessions()
+app.include_router(github_auth.router)
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 _recent_reports: OrderedDict = OrderedDict()
 _report_lock = Lock()
@@ -100,6 +103,7 @@ class AnalysisResponse(BaseModel):
 class TokenReportResponse(AnalysisResponse):
     status: Literal["ok", "partial", "no_data", "unavailable"] = "ok"
     partial: bool = False
+    copilot_enabled: bool = False
     market_data: TokenMarketData
     gmgn_activity: GmgnActivity
     security_data: TokenSecurityData | None = None
@@ -203,6 +207,7 @@ def analyse_token(
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
         status=combined.status,
         partial=combined.partial,
+        copilot_enabled=github_auth.enabled(app.state.settings),
         market_data=combined.market_data,
         gmgn_activity=combined.gmgn_activity,
         security_data=combined.security_data,

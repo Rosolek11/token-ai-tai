@@ -40,6 +40,25 @@ Strona: `http://127.0.0.1:8000/`. Interaktywna dokumentacja API: `http://127.0.0
 `GET /health` sluzy do sprawdzenia serwera. Adres API dla interfejsu mozna ustawic przez `PUBLIC_API_BASE_URL` (pusty oznacza ten sam serwer); publiczny adres jest udostepniany przegladarce przez `GET /api/client-config`.
 Opcjonalne klucze dostawcow i AI sa czytane wylacznie ze zmiennych srodowiskowych. Przykladowe nazwy sa w `.env.example`; aplikacja nie laduje pliku `.env` automatycznie. Plik `.env` pozostaje lokalny i nie nalezy dodawac go do Git.
 
+## GitHub Copilot w raporcie tokena
+
+Na localhost włącz pierwszą konfigurację w lokalnym `.env`:
+
+```dotenv
+AI_PROVIDER=github_copilot
+TAI_PUBLIC_ORIGIN=http://localhost:8000
+GITHUB_LOCAL_SETUP=1
+```
+
+```powershell
+python -m copilot download-runtime
+python -m uvicorn app.main:app --host 127.0.0.1 --env-file .env --no-access-log --no-proxy-headers
+```
+
+W raporcie tokena otwórz **AI summary** i kliknij **Sign in with GitHub**. Przy pierwszym użyciu właściciel potwierdza na GitHubie utworzenie aplikacji Token AI. Serwer zapisuje dane aplikacji w ignorowanym przez Git pliku `.env.github` i kieruje od razu do logowania. Kolejni użytkownicy logują się na własne konta i wybierają **Run with Copilot**. Każdy korzysta z limitu własnej subskrypcji. Serwer używa modelu `auto`. Sesje i wyniki AI znikają po restarcie, wylogowaniu albo wygaśnięciu sesji.
+
+Przy publicznym wdrożeniu ustaw `GITHUB_LOCAL_SETUP=0` i użyj HTTPS. Ustaw publiczny adres w `TAI_PUBLIC_ORIGIN` i zarejestruj ścieżkę `/api/auth/github/callback` jako callback w ustawieniach aplikacji GitHub. Ustaw `GITHUB_OAUTH_CLIENT_ID` i `GITHUB_OAUTH_CLIENT_SECRET` w środowisku wdrożenia oraz `GITHUB_APP=1` w przypadku GitHub App. Hostuj interfejs i endpointy Copilota pod tym samym adresem. Logi proxy powinny pomijać parametry zapytań endpointów OAuth.
+
 ## Walidacja adresow API
 
 `POST /analyses/token` i `POST /analyses/wallet` przyjmuja JSON z polem `address`,

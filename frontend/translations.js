@@ -601,6 +601,9 @@ The available data supports a broader assessment.|Dostępne dane pozwalają na s
 AI analysis is currently unavailable.|Analiza AI jest obecnie niedostępna.
 OpenRouter rate limit reached. Try again later.|Osiągnięto limit zapytań OpenRouter. Spróbuj ponownie później.
 OpenRouter rejected the configured API key.|OpenRouter odrzucił skonfigurowany klucz API.
+BazaarLink rate limit reached. Try again later.|Osiągnięto limit zapytań BazaarLink. Spróbuj ponownie później.
+BazaarLink rejected the configured API key.|BazaarLink odrzucił skonfigurowany klucz API.
+BazaarLink reports no available credits.|BazaarLink zgłasza brak dostępnych środków.
 This report expired. Refresh its data to run the AI analysis.|Raport wygasł. Odśwież dane, aby uruchomić analizę AI.
 Scores by dimension|Oceny szczegółowe
 0 is weakest · 100 is strongest|0 to najsłabszy wynik · 100 to najlepszy wynik
@@ -623,6 +626,30 @@ Available report facts|Dostępne fakty z raportu
 No source-backed facts are available.|Brak dostępnych faktów potwierdzonych przez źródła.
 No provider reasons available. Missing checks are unknown, not evidence of safety.|Brak obserwacji dostawców. Pominięte kontrole pozostają niezweryfikowane.
 Informational only. This is not investment advice.|Wyłącznie w celach informacyjnych. Materiał nie stanowi porady inwestycyjnej.
+GitHub sign-in is not configured on this server.|Logowanie przez GitHub nie jest skonfigurowane na tym serwerze.
+Your GitHub session ended. Sign in again to use Copilot.|Sesja GitHub wygasła. Zaloguj się ponownie, aby użyć Copilota.
+Copilot is already analysing a report for this session.|Copilot już analizuje raport w tej sesji.
+Copilot could not complete the analysis. Check your Copilot access or try again later.|Copilot nie ukończył analizy. Sprawdź dostęp do Copilota lub spróbuj ponownie później.
+Copilot took too long to open the session. Try again.|Copilot zbyt długo otwierał sesję. Spróbuj ponownie.
+Copilot took too long to generate the report. Try again.|Copilot zbyt długo generował raport. Spróbuj ponownie.
+Copilot started returning a result, but the session did not finish. Try again.|Copilot zaczął zwracać wynik, ale sesja się nie zakończyła. Spróbuj ponownie.
+Copilot is analysing the report. This may take a few minutes.|Copilot analizuje raport. Może to potrwać kilka minut.
+The AI cited data outside this report. Run the analysis again to generate new evidence references.|AI wskazała dane spoza tego raportu. Uruchom analizę ponownie, aby wygenerować nowe odnośniki do danych.
+The AI returned missing or unsupported scores. Run the analysis again to generate all assessments.|W odpowiedzi AI brakowało części ocen lub podstaw do ich przyznania. Uruchom analizę ponownie, aby otrzymać komplet ocen.
+The AI returned an invalid score. Run the analysis again.|AI zwróciła nieprawidłowy wynik. Uruchom analizę ponownie.
+The AI returned an unreadable response. Run the analysis again.|AI zwróciła odpowiedź w nieprawidłowym formacie. Uruchom analizę ponownie.
+The AI returned an incomplete report. Run the analysis again.|AI zwróciła niekompletny raport. Uruchom analizę ponownie.
+GitHub did not complete sign-in. Try again.|Nie udało się zalogować przez GitHub. Spróbuj ponownie.
+GitHub did not complete the first-time setup. Try signing in again.|Nie udało się dokończyć pierwszej konfiguracji na GitHubie. Spróbuj zalogować się ponownie.
+On first use, GitHub asks the owner to confirm Token AI. Then each user can sign in to their own account.|Przy pierwszym użyciu GitHub poprosi właściciela o potwierdzenie Token AI. Potem każdy użytkownik może zalogować się na własne konto.
+Could not sign out of GitHub. Try again.|Nie udało się wylogować z GitHub. Spróbuj ponownie.
+Analysis uses your Copilot allowance.|Analiza korzysta z limitu na Twoim koncie Copilot.
+Working…|Analizowanie…
+Run with Copilot|Uruchom z Copilotem
+Sign out|Wyloguj się
+Sign in to run the analysis with your own Copilot account.|Zaloguj się, aby uruchomić analizę na własnym koncie Copilot.
+Sign in with GitHub|Zaloguj się przez GitHub
+GitHub account status is unavailable. Refresh the report to try again.|Nie można sprawdzić sesji GitHub. Odśwież raport, aby spróbować ponownie.
 `;
   const dictionary = Object.fromEntries(entries.trim().split('\n').map(line => line.split('|')));
   root.TokenTranslations = dictionary;

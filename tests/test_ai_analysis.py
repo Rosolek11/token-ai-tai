@@ -102,6 +102,36 @@ def test_deep_report_sends_full_snapshot_and_checks_metric_evidence(bad_referenc
         assert ai.saved_analyses[0].metrics == result.metrics
 
 
+@pytest.mark.parametrize("fault, expected", [(None, None), ("reference", "invalid_fact_id"),
+                                             ("missing_metric", "invalid_metrics"), ("uncited_score", "invalid_metrics")])
+def test_copilot_uses_numbered_references_and_a_fixed_set_of_metrics(fault, expected):
+    def complete(messages, schema):
+        facts = json.loads(messages[1]["content"])["facts"]
+        assert facts == {"1": ["market_data.price_usd", 0], "2": ["listing.dex_paid", False]}
+        assert schema["properties"]["fact_ids"]["items"] == {"type": "integer", "minimum": 1, "maximum": 2}
+        assert schema["properties"]["metrics"]["required"] == list(METRICS)
+        metrics = {key: {"score": None, "rationale": "Brak danych.", "fact_ids": []} for key in METRICS}
+        metrics["price_stability"] = {"score": 0, "rationale": "Odczyt ceny.", "fact_ids": [1]}
+        if fault == "reference":
+            metrics["price_stability"]["fact_ids"] = [3]
+        elif fault == "missing_metric":
+            del metrics["trade_safety"]
+        elif fault == "uncited_score":
+            metrics["price_stability"]["fact_ids"] = []
+        return json.dumps({"score": 10, "summary": "Podsumowanie.", "fact_ids": [1, 2], "metrics": metrics})
+
+    with httpx.Client() as client:
+        ai = AIAnalysisClient(client, None, completion=complete)
+        result = ai.analyse_report({"market_data": {"price_usd": 0}, "listing": {"dex_paid": False}}, address=ADDRESS)
+    assert result.reason == expected
+    if expected:
+        assert result.rejected and ai.saved_analyses == []
+    else:
+        assert result.status == "completed" and len(result.metrics) == 12
+        assert result.fact_ids == ["market_data.price_usd", "listing.dex_paid"]
+        assert next(metric for metric in result.metrics if metric.key == "price_stability").fact_ids == ["market_data.price_usd"]
+
+
 def data(value=0):
     return NormalizedSourceData(price={'price_usd': SourceValue(
         value=value, unit='USD', sourceId='dexscreener')})
@@ -185,6 +215,20 @@ def test_openrouter_uses_only_free_model_with_scoped_credentials(code):
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         result = AIAnalysisClient(client, "openai-test-key", openrouter_api_key="openrouter-test-key").analyse(data())
     assert (result.status, result.reason) == (("completed", None) if code == 200 else ("unavailable", "rate_limited"))
+
+
+def test_bazaarlink_uses_requested_model_and_disables_paid_fallback():
+    def handler(request):
+        assert str(request.url) == "https://api.bazaarlink.ai/v1/chat/completions"
+        assert request.headers["Authorization"] == "Bearer bazaarlink-test-key"
+        assert request.headers["X-Free-Fallback"] == "false"
+        assert json.loads(request.content)["model"] == "deepseek/deepseek-v4-flash-0731free"
+        return httpx.Response(429)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        ai = AIAnalysisClient(client, None, openrouter_api_key="other-key", bazaarlink_api_key="bazaarlink-test-key")
+        result = ai.analyse(data())
+    assert (result.status, result.reason) == ("unavailable", "bazaarlink_rate_limited")
 
 
 def test_solana_endpoint_with_normalized_report():

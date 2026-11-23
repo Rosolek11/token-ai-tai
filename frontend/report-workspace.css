@@ -211,3 +211,37 @@
   .workspace-ready .warning-explanation{font-size:15px;margin:8px 0}
   .workspace-ready .workspace-title{font-size:32px;margin:8px 0 20px}
 }
+.copilot-account:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border-inline-start: 2px solid var(--blue);
+  border-radius: 0 14px 14px 0;
+  background: linear-gradient(105deg, rgba(28, 115, 204, .20), rgba(28, 115, 204, .04));
+}
+.copilot-account-details strong { font: 600 16px var(--display); }
+.copilot-account-details p { margin: 6px 0 0; color: #b4c8df; line-height: 1.45; }
+.copilot-login { margin-inline-start: 10px; color: var(--blue); overflow-wrap: anywhere; }
+.copilot-account-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.copilot-account-actions button,
+.ai-summary .copilot-account-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 14px;
+  background: #102134;
+  border: 1px solid #3c607e;
+  border-radius: 8px;
+  color: #e3f0ff;
+  font: 600 13px var(--display);
+  text-decoration: none;
+  cursor: pointer;
+}
+.copilot-account-actions .copilot-primary,
+.ai-summary .copilot-account-actions a.copilot-primary { background: #245c96; border-color: #549de3; }
+.copilot-account-actions :is(button, a):hover { filter: brightness(1.2); }
+.copilot-account-actions button:disabled { opacity: .65; cursor: wait; }

@@ -3,3 +3,4 @@ uvicorn[standard]==0.34.2
 sqlalchemy==2.0.40
 pytest==8.3.5
 httpx==0.28.1
+github-copilot-sdk==1.0.35
