@@ -52,8 +52,9 @@ async function loadReport() {
     window.ReportWorkspace?.render(result);
     window.ReportWorkspace?.renderAI(result, null, true);
     TokenAI.requestJson(`${base}/api/tokens/${encodeURIComponent(reportAddress)}/ai-analysis`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
-    }).then(aiResult => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, aiResult); })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(result.id ? {report_id:result.id} : {}),
+    }, 90000).then(aiResult => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, aiResult); })
       .catch(() => { if (currentAiRequest === aiRequestId) window.ReportWorkspace?.renderAI(result, { status: 'unavailable' }); });
     const unavailable = market.status === 'unavailable';
     const empty = !unavailable && (market.status === 'no_data' || market.pairs.length === 0);

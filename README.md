@@ -214,7 +214,14 @@ Nazwy pól i źródła przechodzą przez listy dozwolonych wartości; teksty dos
 HTML, URL-e, dowolne rekordy i dynamiczne nazwy ryzyk nie są wysyłane do modelu.
 Zera i `false` pozostają faktami. Wartości nieznane są pomijane.
 
-Ustaw serwerowy `AI_API_KEY`, aby włączyć wywołania OpenAI (model `gpt-4o-mini`).
+Ustaw serwerowy `OPENROUTER_API_KEY`, aby użyć darmowego modelu
+`inclusionai/ling-3.2-flash:free`. Lokalnie uruchom
+`python -m uvicorn app.main:app --env-file .env`, jeśli klucz jest zapisany w `.env`.
+Jeśli ustawisz tylko `AI_API_KEY`, aplikacja użyje OpenAI z modelem `gpt-4o-mini`.
+Widok raportu przekazuje `report_id` i analizuje odczyty użyte w tym raporcie,
+uzupełnione o profil DEX i dostępne dane RPC. Wynik zawiera 12 ocen w skali 0–100,
+uzasadnienia oraz identyfikatory danych źródłowych. Niepełne wymiary mogą pozostać
+bez oceny. Publiczny widget Bubblemaps działa osobno i jego zawartość nie trafia do modelu.
 Klucz służy wyłącznie do nagłówka autoryzacji transportu, nigdy do promptu.
 Wersja promptu: `tai-20-v1`, limit serializowanych wiadomości: 16384 bajty
 (łącznie z instrukcją systemową), timeout operacji HTTP: 15 sekund, bez ponowień,

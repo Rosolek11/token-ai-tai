@@ -10,15 +10,19 @@ import httpx
 from fastapi import Request
 from pydantic import BaseModel, Field
 
+from app.ai_report import AIMetric, METRICS, REPORT_PROMPT_VERSION, detailed_messages, report_facts
 from app.security_data import HolderDistribution, LiquiditySecurity
 from app.source_data import NormalizedSourceData
 
 PROMPT_VERSION = "tai-20-v1"
 MAX_INPUT_BYTES = 16_384
 TIMEOUT_SECONDS = 15.0
+OPENROUTER_TIMEOUT_SECONDS = 40.0
 MIN_SCORE = 0
 MAX_SCORE = 100
 MODEL = "gpt-4o-mini"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "inclusionai/ling-3.2-flash:free"
 SYSTEM_PROMPT = (
     "Prompt version: " + PROMPT_VERSION + ". Analyze only the supplied normalized "
     "Solana token facts. Cite sourceId and field for each conclusion. Missing facts "
@@ -54,6 +58,28 @@ class ValidatedAIOutput(BaseModel):
     fact_ids: list[str]
 
 
+OPENROUTER_OPTIONS = {
+    "reasoning": {"enabled": False},
+    "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "token_analysis",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number"},
+                    "summary": {"type": "string"},
+                    "fact_ids": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["score", "summary", "fact_ids"],
+                "additionalProperties": False,
+            },
+        },
+    },
+}
+
+
 class AIAnalysisResult(BaseModel):
     id: str | None = None
     address: str | None = None
@@ -63,6 +89,7 @@ class AIAnalysisResult(BaseModel):
     summary: str | None = None
     score: float | int | None = None
     fact_ids: list[str] = Field(default_factory=list)
+    metrics: list[AIMetric] = Field(default_factory=list)
     analysed_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -90,6 +117,10 @@ class AIAnalysisStore:
             """
         )
         self._conn.commit()
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(ai_analyses)")}
+        if "metrics_json" not in columns:
+            self._conn.execute("ALTER TABLE ai_analyses ADD COLUMN metrics_json TEXT NOT NULL DEFAULT '[]'")
+            self._conn.commit()
         self._records: list[AIAnalysisResult] = []
 
     def save(self, result: AIAnalysisResult) -> AIAnalysisResult:
@@ -97,8 +128,8 @@ class AIAnalysisStore:
             raise ValueError("Only validated completed AI results may be saved")
         self._conn.execute(
             """
-            INSERT INTO ai_analyses (id, address, prompt_version, analysed_at, score, fact_ids_json, analysis)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ai_analyses (id, address, prompt_version, analysed_at, score, fact_ids_json, analysis, metrics_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 result.id or str(uuid4()),
@@ -108,6 +139,7 @@ class AIAnalysisStore:
                 float(result.score) if result.score is not None else 0.0,
                 json.dumps(result.fact_ids, ensure_ascii=False),
                 result.analysis or "",
+                json.dumps([metric.model_dump() for metric in result.metrics], ensure_ascii=False),
             ),
         )
         self._conn.commit()
@@ -295,14 +327,34 @@ class AIAnalysisClient:
         api_key: str | None,
         *,
         store: AIAnalysisStore | None = None,
+        openrouter_api_key: str | None = None,
     ):
         self.client = client
         self.api_key = api_key
+        self.openrouter_api_key = openrouter_api_key
         self.store = store if store is not None else AIAnalysisStore()
 
     @property
     def saved_analyses(self) -> list[AIAnalysisResult]:
         return self.store.all()
+
+    def analyse_report(self, snapshot: dict, *, address: str) -> AIAnalysisResult:
+        facts = report_facts(snapshot)
+        if not any(isinstance(value, (int, float, bool)) or
+                   (isinstance(value, dict) and isinstance(value.get("value"), (int, float, bool)))
+                   for key,value in facts.items()
+                   if key.startswith(("market_data.", "gmgn_activity.", "onchain_data.",
+                                      "security_data.", "listing.", "local_research."))
+                   and key.rsplit(".",1)[-1] not in {
+                       "http_status","read_only","slot","pages_fetched","page","page_size","max_pages",
+                       "sample_size","top_10_count","sample_accounts","mint_slot","holders_slot",
+                       "critical_flags_count","warning_flags_count","safe_flags_count","total_flags_count",
+                   }):
+            return AIAnalysisResult(status="no_data", prompt_version=REPORT_PROMPT_VERSION)
+        messages = detailed_messages(facts)
+        if len(messages[1]["content"].encode()) > 128_000:
+            return AIAnalysisResult(status="input_too_large", prompt_version=REPORT_PROMPT_VERSION)
+        return self._analyse_messages(messages, {key:key for key in facts}, address, deep=True)
 
     def analyse(
         self,
@@ -316,30 +368,64 @@ class AIAnalysisClient:
             return AIAnalysisResult(status="input_too_large")
         if messages is None:
             return AIAnalysisResult(status="no_data")
-        if not self.api_key:
-            return AIAnalysisResult(status="not_configured")
-
         _, allowed_fact_ids = extract_valid_facts(data)
+        return self._analyse_messages(messages, allowed_fact_ids, address)
+
+    def _analyse_messages(self, messages, allowed_fact_ids, address, *, deep=False):
+        version = REPORT_PROMPT_VERSION if deep else PROMPT_VERSION
+        api_key = self.openrouter_api_key or self.api_key
+        if not api_key:
+            return AIAnalysisResult(status="not_configured", prompt_version=version)
+
+        use_openrouter = bool(self.openrouter_api_key)
+        body = {
+            "model": OPENROUTER_MODEL if use_openrouter else MODEL,
+            "messages": messages,
+            "max_tokens": 4100 if deep else 1000,
+        }
+        if use_openrouter:
+            body.update(OPENROUTER_OPTIONS)
+        if deep:
+            schema = OPENROUTER_OPTIONS["response_format"]["json_schema"]["schema"]
+            body["response_format"] = {"type":"json_schema", "json_schema":{
+                "name":"deep_token_analysis","strict":True,"schema":{
+                    **schema,
+                    "properties":{**schema["properties"],"metrics":{"type":"array","items":{
+                        "type":"object","properties":{
+                            "key":{"type":"string","enum":list(METRICS)},
+                            "score":{"type":["number","null"]},
+                            "rationale":{"type":"string"},
+                            "fact_ids":{"type":"array","items":{"type":"string"}},
+                        },"required":["key","score","rationale","fact_ids"],"additionalProperties":False,
+                    }}},
+                    "required":[*schema["required"],"metrics"],
+                },
+            }}
         try:
             response = self.client.post(
-                self.URL, headers={"Authorization": f"Bearer {self.api_key}"},
-                json={"model": MODEL, "messages": messages, "max_tokens": 1000},
-                timeout=TIMEOUT_SECONDS,
+                OPENROUTER_URL if use_openrouter else self.URL,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=body,
+                timeout=75.0 if deep else OPENROUTER_TIMEOUT_SECONDS if use_openrouter else TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
         except httpx.TimeoutException:
-            return AIAnalysisResult(status="timeout")
+            return AIAnalysisResult(status="timeout", prompt_version=version)
+        except httpx.HTTPStatusError as error:
+            reason = {401: "invalid_api_key", 429: "rate_limited"}.get(error.response.status_code)
+            return AIAnalysisResult(status="unavailable", reason=reason if use_openrouter else None, prompt_version=version)
         except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
-            return AIAnalysisResult(status="unavailable")
+            return AIAnalysisResult(status="unavailable", prompt_version=version)
 
         try:
             validated = validate_model_output(content, allowed_fact_ids)
+            metrics = self._validate_metrics(content, allowed_fact_ids) if deep else []
         except AIOutputValidationError as error:
             return AIAnalysisResult(
                 address=address,
                 status="unavailable",
-                prompt_version=PROMPT_VERSION,
+                prompt_version=version,
                 analysis=None,
                 summary=None,
                 score=None,
@@ -353,11 +439,12 @@ class AIAnalysisClient:
             id=str(uuid4()),
             address=address,
             status="completed",
-            prompt_version=PROMPT_VERSION,
+            prompt_version=version,
             analysis=validated.summary,
             summary=validated.summary,
             score=validated.score,
             fact_ids=validated.fact_ids,
+            metrics=metrics,
             analysed_at=analysed_at,
             created_at=analysed_at,
             updated_at=analysed_at,
@@ -367,11 +454,32 @@ class AIAnalysisClient:
         self.store.save(result)
         return result
 
+    @staticmethod
+    def _validate_metrics(content: str, allowed_fact_ids: dict) -> list[AIMetric]:
+        raw_metrics = json.loads(content).get("metrics")
+        if not isinstance(raw_metrics, list) or len(raw_metrics) != len(METRICS):
+            raise AIOutputValidationError("invalid_metrics", "Expected one result per report metric")
+        try:
+            metrics = [AIMetric.model_validate(item) for item in raw_metrics]
+        except ValueError as error:
+            raise AIOutputValidationError("invalid_metrics", "Invalid metric score or rationale") from error
+        by_key = {metric.key:metric for metric in metrics}
+        if set(by_key) != set(METRICS) or not any(metric.score is not None for metric in metrics):
+            raise AIOutputValidationError("invalid_metrics", "Missing metric keys or supported scores")
+        for metric in metrics:
+            if not metric.rationale.strip() or (metric.score is not None and not metric.fact_ids):
+                raise AIOutputValidationError("invalid_metrics", "Scored metrics require evidence and rationale")
+            if any(fact_id not in allowed_fact_ids for fact_id in metric.fact_ids):
+                raise AIOutputValidationError("invalid_fact_id", "Metric references an unknown fact")
+        return [by_key[key] for key in METRICS]
+
 
 _DEFAULT_AI_STORE = AIAnalysisStore()
 
 
 def get_ai_client(request: Request) -> Iterator[AIAnalysisClient]:
     store = getattr(request.app.state, "ai_store", _DEFAULT_AI_STORE)
+    settings = request.app.state.settings
     with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as client:
-        yield AIAnalysisClient(client, request.app.state.settings.ai_api_key, store=store)
+        yield AIAnalysisClient(client, settings.ai_api_key, store=store,
+                               openrouter_api_key=settings.openrouter_api_key)

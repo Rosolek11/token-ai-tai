@@ -3,6 +3,7 @@
   const dictionary = root.TokenTranslations || (typeof require === 'function' ? require('./translations.js') : {});
   const normalize = text => text.trim().replace(/\s+/g, ' ');
   const patterns = [
+    [/^(.+) Available facts are shown below\.$/, (_, failure) => `${part(failure)} Dostępne fakty są poniżej.`],
     [/^(\S+) sampled · (.+) Only the first page was checked\.(.*)$/, (_, count, total, rest) => `W próbce: ${count} · ${part(total)} Sprawdzono tylko pierwszą stronę.${rest ? ' '+part(rest.trim()) : ''}`],
     [/^(\S+) reported holders\.$/, (_, count) => `Liczba posiadaczy według dostawcy: ${count}.`],
     [/^Holders included in Top 10: (\d+)\.$/, (_, count) => `Liczba posiadaczy uwzględnionych w Top 10: ${count}.`],

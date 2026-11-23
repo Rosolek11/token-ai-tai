@@ -291,6 +291,21 @@ test('complete report renders Solscan fixture and keeps other sections visible t
   assert.match(overview, /Warnings HIGH/);
   assert.match(overview, /Holders 50/);
   assert.match(overview, /Sources 3 \/ 5/);
+  assert.match(contents(screen('ai')), /Evidence confidence Limited/);
+  assert.doesNotMatch(contents(screen('ai')), /Missing or incomplete sources|Conflicting readings/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(contents(screen('ai')), /AI analysis is not configured\./);
+  assert.match(contents(screen('ai')), /Price \/ USD · \$106\.65 · DEX Screener/);
+  assert.equal(screen('ai').nodes.find(node => node.className === 'ai-summary').nodes.find(node => node.id === 'ai-rating').hidden,true);
+  current.context.ReportWorkspace.renderAI({}, {
+    status:'completed', score:41, summary:'Ocena danych.',
+    metrics:[
+      {key:'liquidity_depth',score:0,rationale:'Brak płynności.',fact_ids:['market_data.liquidity_usd']},
+      {key:'ownership_integrity',score:null,rationale:'Brak pokrycia.',fact_ids:[]},
+    ],
+  });
+  assert.match(contents(screen('ai')), /Liquidity depth 0\/100.*market data › liquidity usd/);
+  assert.match(contents(screen('ai')), /Ownership integrity Not scored/);
   const holders = contents(screen('holders'));
   assert.match(holders, /Total supply 4,200 Solscan/);
   assert.match(holders, /Mint authority Renounced/);

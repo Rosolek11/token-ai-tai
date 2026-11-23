@@ -567,6 +567,62 @@ Supply and holder sample|Podaż i próbka posiadaczy
 Provider status|Status dostawcy
 Security checks|Kontrole bezpieczeństwa
 source_error|błąd dostawcy
+AI summary|Podsumowanie AI
+Evidence confidence|Poziom pewności danych
+Checking sources…|Sprawdzanie źródeł…
+Undetermined|Nieokreślony
+Limited|Ograniczony
+Higher|Wyższy
+The report has no usable source facts for this assessment.|Brakuje danych źródłowych do określenia poziomu pewności.
+Gaps or conflicting readings limit confidence in the available evidence.|Braki lub rozbieżności ograniczają pewność dostępnych danych.
+All monitored feeds supplied data and the compared readings showed no conflicts.|Wszystkie monitorowane źródła dostarczyły dane, a porównane odczyty są zgodne.
+Missing or incomplete sources|Brakujące lub niepełne źródła
+Conflicting readings|Sprzeczne odczyty
+All monitored feeds supplied data.|Wszystkie monitorowane źródła dostarczyły dane.
+No conflicts found in comparable readings.|Nie wykryto rozbieżności w porównywalnych odczytach.
+GMGN security|GMGN — bezpieczeństwo
+GMGN activity|GMGN — aktywność
+Partial data|Dane częściowe
+Not configured|Brak konfiguracji
+Access denied|Brak dostępu
+Rate limited|Limit zapytań
+Timed out|Przekroczono czas oczekiwania
+Source unavailable|Źródło niedostępne
+Detected|Wykryto
+Not detected|Nie wykryto
+AI score|Ocena AI
+AI analysis is loading…|Trwa analiza AI…
+AI analysis is not configured.|Analiza AI nie jest skonfigurowana.
+AI analysis timed out.|Przekroczono czas oczekiwania na analizę AI.
+AI analysis has no usable input facts.|Brakuje danych wejściowych do analizy AI.
+The AI result failed validation.|Wynik AI nie przeszedł walidacji.
+The available data supports only a partial assessment.|Dostępne dane pozwalają na częściową ocenę.
+The available data supports a broader assessment.|Dostępne dane pozwalają na szerszą ocenę.
+AI analysis is currently unavailable.|Analiza AI jest obecnie niedostępna.
+OpenRouter rate limit reached. Try again later.|Osiągnięto limit zapytań OpenRouter. Spróbuj ponownie później.
+OpenRouter rejected the configured API key.|OpenRouter odrzucił skonfigurowany klucz API.
+This report expired. Refresh its data to run the AI analysis.|Raport wygasł. Odśwież dane, aby uruchomić analizę AI.
+Scores by dimension|Oceny szczegółowe
+0 is weakest · 100 is strongest|0 to najsłabszy wynik · 100 to najlepszy wynik
+Liquidity depth|Głębokość płynności
+Liquidity durability|Trwałość płynności
+Trading activity|Aktywność handlowa
+Price stability|Stabilność ceny
+Valuation consistency|Spójność wyceny
+Holder distribution|Rozkład posiadaczy
+Ownership integrity|Ryzyko związane z posiadaczami
+Contract controls|Uprawnienia kontraktu
+Trade safety|Bezpieczeństwo obrotu
+Market verification|Weryfikacja rynkowa
+On-chain consistency|Spójność danych on-chain
+Evidence quality|Jakość danych
+Not scored|Brak oceny
+Evidence references|Dane wykorzystane w ocenie
+Provider observations|Obserwacje dostawców
+Available report facts|Dostępne fakty z raportu
+No source-backed facts are available.|Brak dostępnych faktów potwierdzonych przez źródła.
+No provider reasons available. Missing checks are unknown, not evidence of safety.|Brak obserwacji dostawców. Pominięte kontrole pozostają niezweryfikowane.
+Informational only. This is not investment advice.|Wyłącznie w celach informacyjnych. Materiał nie stanowi porady inwestycyjnej.
 `;
   const dictionary = Object.fromEntries(entries.trim().split('\n').map(line => line.split('|')));
   root.TokenTranslations = dictionary;
