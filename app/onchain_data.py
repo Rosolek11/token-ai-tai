@@ -15,6 +15,7 @@ from app.market_data import (
     get_dexscreener_client,
     normalize_optional_number,
 )
+from app.source_cache import SourceCache
 
 OnChainStatus = Literal[
     "ok",
@@ -155,6 +156,7 @@ class SolscanClient:
     DEFAULT_PAGE_SIZE = 10
     MAX_PAGE_SIZE = 20
     MAX_PAGES = 1
+    CACHE_TTL_SECONDS = 120
 
     def __init__(
         self,
@@ -163,12 +165,14 @@ class SolscanClient:
         *,
         page_size: int = DEFAULT_PAGE_SIZE,
         max_pages: int = MAX_PAGES,
+        cache: SourceCache | None = None,
     ) -> None:
         self.client = client
         self.api_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else None
         # Strictly bound pagination to a single page and at most MAX_PAGE_SIZE items.
         self.page_size = max(1, min(int(page_size), self.MAX_PAGE_SIZE))
         self.max_pages = max(1, min(int(max_pages), self.MAX_PAGES))
+        self.cache = cache if self.page_size == self.DEFAULT_PAGE_SIZE else None
 
     def _request_endpoint(
         self, url: str, params: dict[str, Any]
@@ -227,6 +231,12 @@ class SolscanClient:
         return "ok", None, code, data
 
     def fetch_token_onchain(self, address: str) -> TokenOnChainData:
+        cache_key = ("solana", address, "solscan")
+        if self.api_key and self.cache is not None:
+            cached = self.cache.get(cache_key, TokenOnChainData)
+            if cached is not None:
+                return cached
+
         now = datetime.now(timezone.utc)
         meta_url = f"{self.BASE_URL}/token/meta"
         holders_url = f"{self.BASE_URL}/token/holders"
@@ -330,6 +340,11 @@ class SolscanClient:
             raw_supply_dec, ui_supply_dec = self._populate_meta_and_supply(
                 meta_data, metadata=metadata, supply=supply
             )
+
+        has_metadata = bool(
+            metadata.model_dump(exclude={"address"}, exclude_none=True)
+            or supply.model_dump(exclude_none=True)
+        )
 
         # Step 2: Fetch bounded holder sample (strictly capped at page=1, max_pages=1).
         pages_fetched = 0
@@ -446,7 +461,7 @@ class SolscanClient:
             sample_description=sample_desc,
         )
 
-        return TokenOnChainData(
+        result = TokenOnChainData(
             meta_source_url=meta_source_url,
             holders_source_url=holders_source_url,
             updated_at=now,
@@ -464,6 +479,15 @@ class SolscanClient:
             top_10_share_percent=top_10,
             sample_description=sample_desc,
         )
+
+        if (
+            self.cache is not None
+            and meta_status == holders_status == "ok"
+            and has_metadata
+            and parsed_holders
+        ):
+            self.cache.store(cache_key, result, ttl=self.CACHE_TTL_SECONDS)
+        return result
 
     def _populate_meta_and_supply(
         self,
@@ -639,4 +663,6 @@ def get_solscan_client(request: Request) -> Iterator[SolscanClient]:
         return
 
     with httpx.Client(timeout=10.0) as client:
-        yield SolscanClient(client, settings.solscan_api_key)
+        yield SolscanClient(
+            client, settings.solscan_api_key, cache=getattr(request.app.state, "source_cache", None)
+        )

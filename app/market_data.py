@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from typing import Annotated, Iterator, Literal
 
 import httpx
+from fastapi import Request
 from pydantic import BaseModel, BeforeValidator, Field, TypeAdapter
+
+from app.source_cache import SourceCache
 
 
 def normalize_optional_number(value: object) -> object:
@@ -106,11 +109,19 @@ class MarketDataTimeout(MarketDataError):
 
 class DexScreenerClient:
     BASE_URL = "https://api.dexscreener.com/token-pairs/v1/solana"
+    CACHE_TTL_SECONDS = 30
 
-    def __init__(self, client: httpx.Client) -> None:
+    def __init__(self, client: httpx.Client, *, cache: SourceCache | None = None) -> None:
         self.client = client
+        self.cache = cache
 
     def fetch_token_market(self, address: str) -> TokenMarketData:
+        cache_key = ("solana", address, "dexscreener")
+        if self.cache is not None:
+            cached = self.cache.get(cache_key, TokenMarketData)
+            if cached is not None:
+                return cached
+
         source_url = f"{self.BASE_URL}/{address}"
         try:
             response = self.client.get(source_url)
@@ -163,7 +174,7 @@ class DexScreenerClient:
             if primary_pair
             else MarketMetrics()
         )
-        return TokenMarketData(
+        result = TokenMarketData(
             **metrics.model_dump(),
             source_url=source_url,
             updated_at=datetime.now(timezone.utc),
@@ -171,8 +182,12 @@ class DexScreenerClient:
             primary_pair_address=primary_pair.pair_address if primary_pair else None,
             pairs=pairs,
         )
+        if self.cache is not None and result.status == "ok":
+            self.cache.store(cache_key, result, ttl=self.CACHE_TTL_SECONDS)
+        return result
 
 
-def get_dexscreener_client() -> Iterator[DexScreenerClient]:
+def get_dexscreener_client(request: Request = None) -> Iterator[DexScreenerClient]:
+    cache = getattr(request.app.state, "source_cache", None) if request is not None else None
     with httpx.Client(timeout=10.0) as client:
-        yield DexScreenerClient(client)
+        yield DexScreenerClient(client, cache=cache)
