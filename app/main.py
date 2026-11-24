@@ -37,6 +37,7 @@ from app.security_data import (
     TokenSecurityData,
     get_security_client,
 )
+from app.source_cache import SourceCache
 from app.source_data import (
     DEFAULT_PROVIDER_TIMEOUT,
     SourceError,
@@ -51,6 +52,7 @@ app = FastAPI(
     description="API MVP do analizy adresow Solany. Wyniki sa przeslankami, nie porada inwestycyjna.",
 )
 app.state.settings = Settings.from_env()
+app.state.source_cache = SourceCache()
 app.state.github_sessions = github_auth.GitHubSessions()
 app.include_router(github_auth.router)
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
