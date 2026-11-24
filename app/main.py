@@ -43,6 +43,14 @@ from app.source_data import (
     SourceError,
     combine_token_sources,
 )
+from app.wallet_data import (
+    SolscanWalletClient,
+    WalletDataStatus,
+    WalletHistoryLimit,
+    WalletTransaction,
+    WalletTransactionsData,
+    get_wallet_client,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -102,6 +110,13 @@ class AnalysisResponse(BaseModel):
     disclaimer: str
 
 
+class WalletReportResponse(AnalysisResponse):
+    status: WalletDataStatus = "ok"
+    wallet_data: WalletTransactionsData
+    transactions: list[WalletTransaction] = Field(default_factory=list)
+    history_limit: WalletHistoryLimit
+
+
 class TokenReportResponse(AnalysisResponse):
     status: Literal["ok", "partial", "no_data", "unavailable"] = "ok"
     partial: bool = False
@@ -158,14 +173,22 @@ def token_report_page(address: str) -> FileResponse:
     return FileResponse(FRONTEND_DIR / "token.html")
 
 
-@app.post("/analyses/wallet", response_model=AnalysisResponse, status_code=201)
-def analyse_wallet(payload: AnalysisRequest) -> AnalysisResponse:
-    return AnalysisResponse(
+@app.post("/analyses/wallet", response_model=WalletReportResponse, status_code=201)
+def analyse_wallet(
+    payload: AnalysisRequest,
+    wallet_provider: SolscanWalletClient = Depends(get_wallet_client),
+) -> WalletReportResponse:
+    wallet_data = wallet_provider.fetch_wallet_transactions(payload.address)
+    return WalletReportResponse(
         id=str(uuid4()),
         subject_type="wallet",
         address=payload.address,
         created_at=datetime.now(timezone.utc),
         disclaimer="Analiza ma charakter informacyjny i wymaga wlasnej weryfikacji.",
+        status=wallet_data.status,
+        wallet_data=wallet_data,
+        transactions=wallet_data.transactions,
+        history_limit=wallet_data.history_limit,
     )
 
 
@@ -303,6 +326,15 @@ def get_token_onchain_report(
 ) -> TokenOnChainData:
     validate_solana_address(address)
     return solscan.fetch_token_onchain(address)
+
+
+@app.get("/api/wallets/{address}/transactions", response_model=WalletTransactionsData)
+def get_wallet_transactions_report(
+    address: str,
+    wallet_provider: SolscanWalletClient = Depends(get_wallet_client),
+) -> WalletTransactionsData:
+    validate_solana_address(address)
+    return wallet_provider.fetch_wallet_transactions(address)
 
 
 class TokenAnalysisResponse(BaseModel):
