@@ -19,7 +19,7 @@ function element() {
 }
 function page(fetchHandler = async () => { throw new Error('Unexpected request'); }, pathname = '/analysis') {
   const names = ['analysis-form', 'address', 'analysis-submit', 'analysis-message', 'use-example',
-    'market-report', 'loading-state', 'error-state', 'report-content', 'refresh-report',
+    'market-report', 'loading-state', 'error-state', 'report-content', 'refresh-report', 'refresh-label', 'report-last-updated',
     'retry-analysis', 'copy-address', 'report-address', 'report-stage', 'report-state-badge',
     'report-state-label', 'report-status', 'source-state', 'source-led', 'error-title',
     'error-detail', 'empty-market', 'market-unavailable', 'partial-market', 'report-token-name', 'pair-summary', 'copy-feedback',
@@ -267,6 +267,65 @@ test('report waits with spinner, hides old content and prevents parallel request
   assert.equal(current.elements['report-content'].hidden, false);
   assert.equal(current.elements['refresh-report'].disabled, false);
   assert.equal(current.elements['report-state-badge'].dataset.state, 'ready');
+});
+test('refresh keeps the report visible, updates its time and ignores duplicate requests', async () => {
+  let reports = 0;
+  let finishRefresh;
+  const current = page(async url => {
+    if (url === '/api/client-config') return config();
+    if (url.includes('/ai-analysis')) return ok({status:'not_configured'});
+    if (!url.includes('/analyses/token')) throw new Error(`Unexpected request: ${url}`);
+    reports += 1;
+    if (reports === 1) return ok(data());
+    return new Promise(resolve => { finishRefresh = () => resolve(ok({...data({price_usd:201}),created_at:new Date().toISOString()})); });
+  }, '/token/' + address);
+
+  await current.report();
+  assert.equal(current.elements['report-last-updated'].dataset.state, 'current');
+  const pending = current.elements['refresh-report'].listeners.click();
+  assert.equal(current.elements['report-content'].hidden, false);
+  assert.equal(current.elements['loading-state'].hidden, true);
+  assert.equal(current.elements['report-state-badge'].dataset.state, 'refreshing');
+  assert.equal(current.elements['refresh-label'].textContent, 'Refreshing…');
+  assert.equal(current.elements['refresh-report'].disabled, true);
+
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reports, 2);
+  await current.context.loadReport();
+  assert.equal(reports, 2);
+  finishRefresh();
+  await pending;
+
+  assert.equal(current.metric('price_usd'), '$201.00');
+  assert.equal(current.elements['report-state-badge'].dataset.state, 'ready');
+  assert.equal(current.elements['refresh-report'].disabled, false);
+  assert.equal(current.elements['report-last-updated'].dataset.state, 'current');
+});
+test('failed refresh preserves the previous report and marks its age as stale', async () => {
+  let reports = 0;
+  const current = page(async url => {
+    if (url === '/api/client-config') return config();
+    if (url.includes('/ai-analysis')) return ok({status:'not_configured'});
+    if (!url.includes('/analyses/token')) throw new Error(`Unexpected request: ${url}`);
+    reports += 1;
+    if (reports === 1) return ok(data());
+    throw new TypeError('Failed to fetch');
+  }, '/token/' + address);
+
+  await current.report();
+  const previousPrice = current.metric('price_usd');
+  const previousTimestamp = current.elements['report-last-updated'].attributes.datetime;
+  await current.elements['refresh-report'].listeners.click();
+
+  assert.equal(current.elements['report-content'].hidden, false);
+  assert.equal(current.elements['error-state'].hidden, true);
+  assert.equal(current.metric('price_usd'), previousPrice);
+  assert.equal(current.elements['report-state-badge'].dataset.state, 'stale');
+  assert.match(current.elements['report-status'].textContent, /Refresh failed.*last updated/);
+  assert.equal(current.elements['report-last-updated'].dataset.state, 'stale');
+  assert.match(current.elements['report-last-updated'].textContent, /Showing previous data/);
+  assert.equal(current.elements['report-last-updated'].attributes.datetime, previousTimestamp);
+  assert.equal(current.elements['refresh-report'].disabled, false);
 });
 test('direct report visit and page reload use the address in the URL', async () => {
   for (let reload = 0; reload < 2; reload++) {
