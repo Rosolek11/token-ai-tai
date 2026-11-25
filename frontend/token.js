@@ -8,6 +8,8 @@ const marketUnavailable = document.getElementById('market-unavailable');
 let reportAddress = '';
 let inFlight = false;
 let aiRequestId = 0;
+let lastSuccessfulReport = null;
+let lastSuccessfulAt = null;
 function requestAnalysis(base, result, timeout = 120000) {
   return TokenAI.requestJson(base + analysisPath(), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -82,17 +84,54 @@ catch { /* Invalid URL encoding is handled as an invalid address. */ }
 document.getElementById('report-address').textContent = reportAddress || 'Invalid address';
 
 function setReportState(state, text) {
-  loadingState.hidden = state !== 'loading';
-  errorState.hidden = state !== 'error';
-  reportContent.hidden = !['ready', 'no_data', 'partial'].includes(state);
-  document.getElementById('report-stage').setAttribute('aria-busy', String(state === 'loading'));
+  const busy = state === 'loading' || state === 'refreshing';
+  const keepPreviousReport = Boolean(lastSuccessfulReport) && ['refreshing', 'stale'].includes(state);
+  loadingState.hidden = state !== 'loading' || keepPreviousReport;
+  errorState.hidden = state !== 'error' || keepPreviousReport;
+  reportContent.hidden = keepPreviousReport ? false : !['ready', 'no_data', 'partial'].includes(state);
+  document.getElementById('report-stage').setAttribute('aria-busy', String(busy));
   document.getElementById('report-state-badge').dataset.state = state;
-  document.getElementById('report-state-label').textContent = { loading: 'CONNECTING', ready: 'SNAPSHOT READY', no_data: 'NO PAIRS FOUND', partial: 'PARTIAL REPORT', error: 'UNAVAILABLE' }[state];
+  document.getElementById('report-state-label').textContent = { loading: 'CONNECTING', refreshing: 'REFRESHING', ready: 'SNAPSHOT READY', no_data: 'NO PAIRS FOUND', partial: 'PARTIAL REPORT', stale: 'STALE DATA', error: 'UNAVAILABLE' }[state];
+  const refreshLabel = document.getElementById('refresh-label');
+  if (refreshLabel) refreshLabel.textContent = state === 'refreshing' ? 'Refreshing…' : 'Refresh data';
   document.getElementById('report-status').textContent = text;
-  document.getElementById('source-state').textContent = { loading: 'Waiting for DEX Screener', ready: 'Snapshot retrieved', no_data: 'Source returned no pairs', partial: 'Market data unavailable', error: 'Could not retrieve data' }[state];
-  document.getElementById('source-led').className = state === 'ready' ? 'is-ready' : state === 'loading' ? 'is-loading' : '';
-  refreshButton.disabled = state === 'loading' || !TokenAI.isSolanaAddress(reportAddress);
-  retryButton.disabled = state === 'loading' || !TokenAI.isSolanaAddress(reportAddress);
+  document.getElementById('source-state').textContent = { loading: 'Waiting for DEX Screener', refreshing: 'Refreshing report', ready: 'Snapshot retrieved', no_data: 'Source returned no pairs', partial: 'Market data unavailable', stale: 'Showing previous snapshot', error: 'Could not retrieve data' }[state];
+  document.getElementById('source-led').className = state === 'ready' ? 'is-ready' : busy ? 'is-loading' : '';
+  refreshButton.disabled = busy || !TokenAI.isSolanaAddress(reportAddress);
+  retryButton.disabled = busy || !TokenAI.isSolanaAddress(reportAddress);
+}
+
+function reportTimestamp(result) {
+  const timestamps = [result?.created_at, result?.market_data?.updated_at, result?.security_data?.updated_at,
+    result?.onchain_data?.updated_at, result?.gmgn_activity?.updated_at];
+  return timestamps.find(value => typeof value === 'string' && !Number.isNaN(new Date(value).getTime())) || null;
+}
+
+function formatReportAge(value) {
+  if (!value) return 'time unavailable';
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function renderLastUpdated(stale = false) {
+  const time = document.getElementById('report-last-updated');
+  if (!time) return;
+  const age = formatReportAge(lastSuccessfulAt);
+  time.textContent = `Last updated ${age}${stale ? ' · Showing previous data' : ''}`;
+  time.dataset.state = stale ? 'stale' : 'current';
+  if (lastSuccessfulAt) {
+    time.setAttribute('datetime', lastSuccessfulAt);
+    time.title = TokenAI.formatUpdatedAt(lastSuccessfulAt);
+  } else {
+    time.removeAttribute('datetime');
+    time.removeAttribute('title');
+  }
 }
 
 async function loadReport() {
@@ -106,8 +145,9 @@ async function loadReport() {
   }
   inFlight = true;
   const currentAiRequest = ++aiRequestId;
-  window.ReportWorkspace?.render(null, true);
-  setReportState('loading', 'Requesting current market data from DEX Screener.');
+  const refreshing = Boolean(lastSuccessfulReport);
+  if (!refreshing) window.ReportWorkspace?.render(null, true);
+  setReportState(refreshing ? 'refreshing' : 'loading', refreshing ? 'Refreshing the report. Your current data remains visible.' : 'Requesting current market data from DEX Screener.');
   try {
     const base = await TokenAI.apiBase();
     const result = await TokenAI.requestJson(`${base}/analyses/token?allow_partial=true`, {
@@ -117,6 +157,8 @@ async function loadReport() {
     if (result?.address !== reportAddress || result?.subject_type !== 'token' || !market || !['ok', 'no_data', 'unavailable'].includes(market.status) || !Array.isArray(market.pairs)) {
       throw new Error('The source returned an incomplete report. Please try again.');
     }
+    lastSuccessfulReport = result;
+    lastSuccessfulAt = reportTimestamp(result);
     TokenAI.updateMarketReport(result, reportAddress);
     window.ReportWorkspace?.render(result);
     if (result.copilot_enabled) {
@@ -140,16 +182,23 @@ async function loadReport() {
     if (unavailable) setReportState('partial', 'Market data is unavailable. You can still inspect the other report sections.');
     else if (empty) setReportState('no_data', 'The source returned no trading pairs for this address.');
     else setReportState('ready', 'Report ready. Coverage varies by section.');
+    renderLastUpdated();
     const secStateEl = document.getElementById('security-source-state');
     const secLedEl = document.getElementById('security-source-led');
     const secStatus = result?.security_data?.overall_status;
     if (secStateEl) secStateEl.textContent = secStatus === 'ok' ? 'All security sources ready' : secStatus === 'partial' ? 'Partial security telemetry' : 'Unavailable / limited sources';
     if (secLedEl) secLedEl.className = ['ok', 'partial'].includes(secStatus) ? 'is-ready' : '';
   } catch (error) {
-    window.ReportWorkspace?.render(null);
-    document.getElementById('error-title').textContent = "We couldn't load this report.";
-    document.getElementById('error-detail').textContent = error.message || 'The analysis service is unavailable. Please try again.';
-    setReportState('error', 'Your address is preserved. Retry when the source is available.');
+    if (lastSuccessfulReport) {
+      const age = formatReportAge(lastSuccessfulAt);
+      setReportState('stale', `Refresh failed. Showing the previous report, last updated ${age}.`);
+      renderLastUpdated(true);
+    } else {
+      window.ReportWorkspace?.render(null);
+      document.getElementById('error-title').textContent = "We couldn't load this report.";
+      document.getElementById('error-detail').textContent = error.message || 'The analysis service is unavailable. Please try again.';
+      setReportState('error', 'Your address is preserved. Retry when the source is available.');
+    }
   } finally { inFlight = false; }
 }
 
